@@ -1,0 +1,17 @@
+name: 'trivy-gitlab'
+repository: github.com/afdesk/trivy-gitlab
+version: '0.0.1'
+usage: ...
+description: |-
+    ...
+platforms:
+    - selector:
+          os: linux
+          arch: amd64
+      uri: https://github.com/afdesk/trivy-gitlab/releases/trivy-gitlab/v0.0.1/trivy-gitlab.tar.gz
+      bin: ./trivy-gitlab
+    - selector: # dev
+          os: darwin
+          arch: arm64
+      uri: ./trivy-gitlab
+      bin: ./trivy-gitlab
