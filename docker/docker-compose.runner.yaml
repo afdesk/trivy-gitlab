@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  register:
+    env_file:
+      - .env
+    image: gitlab/gitlab-runner:alpine3.15-bleeding
+    volumes:
+      - './register-entrypoint.sh:/etc/entrypoint.sh'
+      - 'gitlab-runner-config:/etc/gitlab-runner'
+      - 'gitlab-runner-config:/var/run/docker.sock'
+    entrypoint: /etc/entrypoint.sh
+
+  gitlab-runner:
+    container_name: gitlab-runner
+    image: gitlab/gitlab-runner:alpine3.15-bleeding
+    depends_on:
+      - register
+    restart: always
+    volumes:
+      - 'gitlab-runner-config:/etc/gitlab-runner'
+      - '/var/run/docker.sock:/var/run/docker.sock'
+
+networks:
+  default:
+     external: true
+     name: gitlab_net
+
+volumes:
+    gitlab-runner-config:
+      external: true
