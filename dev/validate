@@ -1,0 +1,13 @@
+#!/bin/bash
+
+function validate() {
+    schema_file=container-scanning-report-schema.json
+
+#    TODO: use a specific version
+    wget -O $schema_file "https://gitlab.com/gitlab-org/security-products/security-report-schemas/-/raw/master/dist/container-scanning-report-format.json?inline=false"
+
+    ruby validate.rb $schema_file example-container-scanning.json
+    trap 'rm -f -- "$schema_file"' EXIT
+}
+
+validate "$@"
