@@ -1,16 +1,16 @@
 variables:
-  TRIVY_TAG: "latest"
-  TRIVY_IMAGE: "aquasec/trivy:$TRIVY_TAG"
-  CS_SCHEMA_MODEL: 15
+    TRIVY_TAG: 'latest'
+    TRIVY_IMAGE: 'aquasec/trivy:$TRIVY_TAG'
+    CS_SCHEMA_MODEL: 15
 
 trivy_container_scanning:
-  image: "$TRIVY_IMAGE"
-  stage: test
-  allow_failure: true
-  artifacts:
-    reports:
-      container_scanning: trivy-container-scanning-report.json
+    image: '$TRIVY_IMAGE'
+    stage: test
+    allow_failure: true
+    artifacts:
+        reports:
+            container_scanning: trivy-container-scanning-report.json
 
-    script:
-#      TODO
-      - trivy plugin i github.com/afdesk/trivy-gitlab
+        script:
+            #      TODO
+            - trivy plugin i github.com/afdesk/trivy-gitlab
