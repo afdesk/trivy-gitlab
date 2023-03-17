@@ -9,10 +9,12 @@ if [ ! -s "${CONF_FILE}" ]; then
         --url "http://gitlab" \
         --registration-token "${REGISTRATION_TOKEN}" \
         --executor "docker" \
-        --docker-image alpine:latest \
+        --docker-image "docker:23.0.1" \
+        --docker-privileged true \
         --docker-network-mode "gitlab_net" \
+        --docker-volumes '/var/run/docker.sock:/var/run/docker.sock' \
         --description "docker-runner" \
-        --tag-list "docker" \
+        --tag-list "" \
         --run-untagged="true" \
         --locked="false" \
         --access-level="not_protected"

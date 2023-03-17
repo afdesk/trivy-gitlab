@@ -3,12 +3,12 @@ services:
   gitlab:
     container_name: gitlab
     platform: "linux/amd64"
-    hostname: 'localhost'
+    hostname: 'gitlab.local'
     image: 'gitlab/gitlab-ee:15.9.3-ee.0'
     restart: always
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'http://localhost'
+        external_url 'http://gitlab.local:8080'
       GITLAB_HOME: $HOME/gitlab
     ports:
       - '8080:80'
@@ -19,6 +19,13 @@ services:
       - '$GITLAB_HOME/log:/var/log/gitlab'
       - 'gitlab-data:/var/opt/gitlab'
     shm_size: '256m'
+
+  registry:
+    container_name: registry
+    image: registry:2.8.1
+    restart: always
+    ports:
+      - "50001:5000"
 
 networks:
   default:

@@ -7,7 +7,7 @@ services:
     volumes:
       - './register-entrypoint.sh:/etc/entrypoint.sh'
       - 'gitlab-runner-config:/etc/gitlab-runner'
-      - 'gitlab-runner-config:/var/run/docker.sock'
+      - '/var/run/docker.sock:/var/run/docker.sock'
     entrypoint: /etc/entrypoint.sh
 
   gitlab-runner:
