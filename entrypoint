@@ -1,0 +1,7 @@
+#!/bin/bash
+
+function entrypoint() {
+    ./trivy-gitlab "$@"
+}
+
+entrypoint "$@"

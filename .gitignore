@@ -1,2 +1,6 @@
 .idea
 **/.env
+**/.DS_Store
+*.gz
+trivy-gitlab
+**/certs
