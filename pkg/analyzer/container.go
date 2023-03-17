@@ -3,6 +3,7 @@ package analyzer
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/Jeffail/gabs/v2"
@@ -14,12 +15,16 @@ type containerAnalyzer struct {
 	templateFileName string
 }
 
-func NewContainerAnalyzer(imageName string) *containerAnalyzer {
+func NewContainerAnalyzer() (*containerAnalyzer, error) {
+	imageName, err := extractImageName()
+	if err != nil {
+		return nil, err
+	}
 	return &containerAnalyzer{
 		imageName,
 		"container-scanning.json",
 		"container-scanning.tpl",
-	}
+	}, nil
 }
 
 func (a *containerAnalyzer) TemplateFileName() string {
@@ -69,4 +74,64 @@ func (a *containerAnalyzer) Convert(trivy_report *gabs.Container) error {
 	// sum := sha256.Sum256([]byte(id_values))
 
 	return nil
+}
+
+func extractImageName() (string, error) {
+	if value, ok := os.LookupEnv("CS_IMAGE"); ok {
+		return value, nil
+	}
+	if value, ok := os.LookupEnv("DOCKER_IMAGE"); ok {
+		return value, nil
+	}
+
+	applicationRepository, err := getApplicationRepository()
+	if err != nil {
+		return "", err
+	}
+
+	applicationTag, err := getApplicationTag()
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s:%s", applicationRepository, applicationTag), nil
+}
+
+func getApplicationRepository() (string, error) {
+	if value, ok := os.LookupEnv("CI_APPLICATION_REPOSITORY"); ok {
+		return value, nil
+	}
+
+	return getDefaultApplicationRepository()
+}
+
+func getApplicationTag() (string, error) {
+	if value, ok := os.LookupEnv("CI_APPLICATION_TAG"); ok {
+		return value, nil
+	}
+
+	return getEnvOrError("CI_APPLICATION_TAG")
+}
+
+func getDefaultApplicationRepository() (string, error) {
+
+	registryImage, err := getEnvOrError("CI_REGISTRY_IMAGE")
+	if err != nil {
+		return "", err
+	}
+
+	commitRefSlug, err := getEnvOrError("CI_COMMIT_REF_SLUG")
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s/%s", registryImage, commitRefSlug), nil
+}
+
+func getEnvOrError(key string) (string, error) {
+
+	if value, ok := os.LookupEnv(key); ok {
+		return value, nil
+	}
+
+	return "", fmt.Errorf("none of the environment variables %s were found but are required for execution", key)
 }

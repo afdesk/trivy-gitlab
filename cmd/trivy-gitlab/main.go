@@ -32,18 +32,12 @@ func ContainerScanningCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "container IMAGE_NAME",
 		Short: "Container scanning",
-		Args:  cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var imageName string
-			if len(args) == 0 {
-				imageName = os.Getenv("DOCKER_IMAGE") // TODO
-				if imageName == "" {
-					return fmt.Errorf("todo...")
-				}
-			} else {
-				imageName = args[0]
+			containerAnalyzer, err := analyzer.NewContainerAnalyzer()
+			if err != nil {
+				return err
 			}
-			return analyzer.Run(analyzer.NewContainerAnalyzer(imageName))
+			return analyzer.Run(containerAnalyzer)
 		},
 	}
 }
