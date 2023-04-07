@@ -4,3 +4,4 @@
 *.gz
 trivy-gitlab
 **/certs
+**/*.pem
