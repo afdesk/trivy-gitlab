@@ -1,14 +1,14 @@
 version: '3.8'
 services:
   register:
-    env_file:
-      - .env
     image: gitlab/gitlab-runner:alpine3.15-bleeding
     volumes:
       - './register-entrypoint.sh:/etc/entrypoint.sh'
       - 'gitlab-runner-config:/etc/gitlab-runner'
       - '/var/run/docker.sock:/var/run/docker.sock'
     entrypoint: /etc/entrypoint.sh
+    environment:
+      REGISTRATION_TOKEN: ${REGISTRATION_TOKEN}
 
   gitlab-runner:
     container_name: gitlab-runner

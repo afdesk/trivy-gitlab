@@ -8,30 +8,53 @@ services:
     restart: always
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'http://gitlab.local:8080'
+        external_url 'http://gitlab.local'
+        registry_external_url 'http://gitlab.local:5005'
+
+        gitlab_rails['registry_enabled'] = true
+        gitlab_rails['registry_host'] = "http://gitlab.local"
+        gitlab_rails['registry_port'] = "5005"
+        gitlab_rails['registry_path'] = "/var/opt/gitlab/gitlab-rails/shared/registry"
+
+        gitlab_rails['gitlab_default_projects_features_container_registry'] = true
+
+        gitlab_rails['registry_api_url'] = "http://registry:5000"
+        registry['enable'] = true
+        registry['registry_http_addr'] = "registry:5000"
+
       GITLAB_HOME: $HOME/gitlab
     ports:
-      - '8080:80'
+      - '80:80'
       - '443:443'
       - '22:22'
+      - '5005:5005'
     volumes:
       - '$GITLAB_HOME/config:/etc/gitlab'
       - '$GITLAB_HOME/log:/var/log/gitlab'
       - 'gitlab-data:/var/opt/gitlab'
     shm_size: '256m'
+    networks:
+      gitlab_net:
+        aliases:
+          - "gitlab.local"
 
   registry:
     container_name: registry
     image: registry:2.8.1
     restart: always
+    volumes:
+      - registry-data:/var/lib/registry
     ports:
       - "50001:5000"
+    networks:
+      - gitlab_net
 
 networks:
-  default:
-     external: true
-     name: gitlab_net
+  gitlab_net:
+    external: true
 
 volumes:
     gitlab-data:
+      external: true
+    registry-data:
       external: true

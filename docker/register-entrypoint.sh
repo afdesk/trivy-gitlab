@@ -10,14 +10,9 @@ if [ ! -s "${CONF_FILE}" ]; then
         --registration-token "${REGISTRATION_TOKEN}" \
         --executor "docker" \
         --docker-image "docker:23.0.1" \
-        --docker-privileged true \
-        --docker-network-mode "gitlab_net" \
-        --docker-volumes '/var/run/docker.sock:/var/run/docker.sock' \
-        --description "docker-runner" \
-        --tag-list "" \
-        --run-untagged="true" \
-        --locked="false" \
-        --access-level="not_protected"
+        --docker-network-mode gitlab_net \
+        --docker-volumes /var/run/docker.sock:/var/run/docker.sock \
+        --description "docker-runner"
 else
     echo -e "Ignoring registration : config.toml file not empty (already registered)."
 fi
