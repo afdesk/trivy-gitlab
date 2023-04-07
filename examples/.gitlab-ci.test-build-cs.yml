@@ -1,0 +1,14 @@
+include:
+    - remote: 'https://fc5d-64-225-69-54.ngrok.io/templates/jobs/container-scanning.gitlab-ci.yml'
+
+variables:
+    SOURCE_IMAGE: python
+    CONTAINER_TEST_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+
+test:
+    script:
+        - docker pull $SOURCE_IMAGE
+        - docker tag $SOURCE_IMAGE $CONTAINER_TEST_IMAGE
+        - docker login -u “$CI_REGISTRY_USER” -p “$CI_REGISTRY_PASSWORD” $CI_REGISTRY
+        - docker push $CONTAINER_TEST_IMAGE
+        - docker logout
