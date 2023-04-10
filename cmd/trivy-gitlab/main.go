@@ -10,11 +10,16 @@ import (
 
 func main() {
 	rootCmd := NewRootCommand()
+
+	globalOptions := &analyzer.GlobalOptions{}
+	rootCmd.PersistentFlags().BoolVar(&globalOptions.Debug, "debug", false, "debug mode")
+
 	rootCmd.AddCommand(
-		ContainerScanningCommand(),
-		DependencyScanningCommand(),
-		SecretDetectCommand(),
+		ContainerScanningCommand(globalOptions),
+		DependencyScanningCommand(globalOptions),
+		SecretDetectCommand(globalOptions),
 	)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -28,21 +33,25 @@ func NewRootCommand() *cobra.Command {
 	}
 }
 
-func ContainerScanningCommand() *cobra.Command {
+func ContainerScanningCommand(options *analyzer.GlobalOptions) *cobra.Command {
+
 	return &cobra.Command{
 		Use:   "container IMAGE_NAME",
 		Short: "Container scanning",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			containerAnalyzer, err := analyzer.NewContainerAnalyzer()
-			if err != nil {
-				return err
-			}
-			return analyzer.Run(containerAnalyzer)
+			return analyzer.Run(
+				cmd.Context(),
+				func() (analyzer.Analyzer[analyzer.ContainerOptions], error) {
+					return analyzer.NewContainerAnalyzer(args[0])
+				},
+				analyzer.ContainerOptions{GlobalOptions: *options},
+			)
 		},
 	}
 }
 
-func DependencyScanningCommand() *cobra.Command {
+func DependencyScanningCommand(options *analyzer.GlobalOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "dependency",
 		Short: "Dependency scanning",
@@ -52,7 +61,7 @@ func DependencyScanningCommand() *cobra.Command {
 	}
 }
 
-func SecretDetectCommand() *cobra.Command {
+func SecretDetectCommand(options *analyzer.GlobalOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "secret",
 		Short: "Secret scanning",

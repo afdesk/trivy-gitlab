@@ -2,6 +2,7 @@ package analyzer
 
 import (
 	"bytes"
+	"context"
 	"log"
 	"os"
 	"os/exec"
@@ -13,21 +14,26 @@ import (
 
 const GitlabReportTimePattern = "2006-01-02T15:04:05"
 
-func gitlabFormatTime() string {
+func formattedTime() string {
 	return time.Now().Format(GitlabReportTimePattern)
 }
 
-func Run(analyzer Analyzer) error {
+func Run[O any](ctx context.Context, getAnalyzer func() (Analyzer[O], error), options O) error {
+
+	analyzer, err := getAnalyzer()
+	if err != nil {
+		return err
+	}
 
 	pwd, _ := os.Getwd()
 	templateFile := filepath.Join(pwd, "templates", "report", analyzer.TemplateFileName())
 
 	tempFile := filepath.Join(pwd, "temp.json")
-	startTime := gitlabFormatTime()
+	startTime := formattedTime()
 	_, stderr, err := execTrivyCommand(
-		analyzer.ScanCommand(tempFile, templateFile)...,
+		ctx, analyzer.ScanCommand(tempFile, templateFile, options),
 	)
-	endTime := gitlabFormatTime()
+	endTime := formattedTime()
 	if err != nil {
 		log.Println(stderr)
 		return err
@@ -60,17 +66,17 @@ func Run(analyzer Analyzer) error {
 	return nil
 }
 
-type Analyzer interface {
-	ScanCommand(outputFileName, templateFile string) []string
+type Analyzer[O any] interface {
+	ScanCommand(outputFileName, templateFile string, options O) []string
 	Convert(trivyReport *gabs.Container) error
 	TemplateFileName() string
 	ReportFileName() string
 }
 
-func execTrivyCommand(cmds ...string) (string, string, error) {
+func execTrivyCommand(ctx context.Context, cmds []string) (string, string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	cmd := exec.Command("trivy", cmds...)
+	cmd := exec.CommandContext(ctx, "trivy", cmds...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
