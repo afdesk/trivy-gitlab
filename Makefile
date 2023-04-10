@@ -1,6 +1,6 @@
 .PHONY: build
 build:
-	@go build ./cmd/trivy-gitlab
+	@GOOS=linux GOARCH=amd64 go build ./cmd/trivy-gitlab
 
 .PHONY: install
 install:
