@@ -4,13 +4,16 @@ variables:
     CS_SCHEMA_MODEL: 15
 
 trivy_container_scanning:
-    image: '$TRIVY_IMAGE'
     stage: test
+    variables:
+        GIT_STRATEGY: none
     allow_failure: true
     artifacts:
         reports:
             container_scanning: trivy-container-scanning-report.json
-
-        script:
-            #      TODO
-            - trivy plugin i github.com/afdesk/trivy-gitlab
+        paths:
+            - trivy-container-scanning-report.json
+    dependencies: []
+    script:
+        - docker pull $TRIVY_IMAGE
+        - docker run $TRIVY_IMAGE plugin run http://ff94-92-124-160-226.ngrok-free.app/trivy-gitlab.tar.gz container minio/minio:latest

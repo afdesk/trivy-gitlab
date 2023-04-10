@@ -47,7 +47,7 @@ docker tag alpine gitlab.local:5005/{gitlab_instance_id}/monitoring
 docker push gitlab.local:5005/{gitlab_instance_id}/monitoring
 ```
 
-<!-- #### Allow insecure registry
+#### Allow insecure registry
 Add follow to docker daemon config
 ```json
 {
@@ -57,7 +57,7 @@ Add follow to docker daemon config
 - for macos ~/.docker/daemon.json
 - for linux etc/dcoker/daemon.json
 
-Restart docker service -->
+Restart docker service.
 
 
 ### Install runner
@@ -69,38 +69,6 @@ Restart docker service -->
 Start register and runner
 ```shell
 docker-compose -f docker/docker-compose.runner.yaml up -d
-```
-<!-- 
-Connect to runner and add `network_mode = "gitlab_net"` to etc/gitlab-runner/config.toml in `[runners.docker]` section:
-```yaml
-concurrent = 1
-check_interval = 0
-shutdown_timeout = 0
-
-[session_server]
-  session_timeout = 1800
-
-[[runners]]
-  name = "616201193c6d"
-  url = "http://gitlab"
-  id = 1
-  token = "kL5Em9Kjxtswu3x9MTBM"
-  token_obtained_at = 2023-04-07T07:03:19Z
-  token_expires_at = 0001-01-01T00:00:00Z
-  executor = "docker"
-  [runners.cache]
-    MaxUploadedArchiveSize = 0
-  [runners.docker]
-    tls_verify = false
-    image = "docker:23.0.1"
-    privileged = true
-    disable_entrypoint_overwrite = false
-    oom_kill_disable = false
-    disable_cache = false
-    volumes = ["/cache"]
-  + network_mode = "gitlab_net"
-    shm_size = 0
-``` -->
 
 ### Build plugin
 
@@ -115,7 +83,10 @@ This will allow `trivy` to extract the archive with the plugin from the working 
 Share directory
 ```shell
 ngrok http "file://${PWD}"
+export NGROK_URL=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
 ```
+
+Put ngrok public url to plugin.yaml and templates
 
 Example:
 ```shell
@@ -123,16 +94,6 @@ trivy plugin run http://{ngrok_url}/trivy-gitlab.tar.gz container minio/minio:la
 ```
 
 ## Quick start
-
-<!-- During local testing, to resolve an unsafe register (because http), you need to add the following lines to all pipelines:
-```yaml
-variables:
-  DOCKER_TLS_CERTDIR: ""
-
-services:
-  - name: docker:dind
-    command: [ "--insecure-registry=gitlab.local:5005" ]
-``` -->
 
 1. Create repo
 2. Create dockerfile
