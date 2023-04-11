@@ -18,10 +18,14 @@ type ContainerOptions struct {
 	GlobalOptions
 }
 
+func (o ContainerOptions) Global() GlobalOptions {
+	return o.GlobalOptions
+}
+
 func NewContainerAnalyzer(imgName string) (*containerAnalyzer, error) {
 	return &containerAnalyzer{
 		imgName,
-		"container-scanning.json",
+		"trivy-container-scanning-report.json",
 		"container-scanning.tpl",
 	}, nil
 }

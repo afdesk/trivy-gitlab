@@ -13,6 +13,8 @@ func main() {
 
 	globalOptions := &analyzer.GlobalOptions{}
 	rootCmd.PersistentFlags().BoolVar(&globalOptions.Debug, "debug", false, "debug mode")
+	rootCmd.PersistentFlags().StringVar(&globalOptions.ReportPath, "report-path", "", "report path")
+	rootCmd.PersistentFlags().StringVar(&globalOptions.TemplatePath, "template-path", "", "template-path")
 
 	rootCmd.AddCommand(
 		ContainerScanningCommand(globalOptions),

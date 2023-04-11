@@ -18,17 +18,24 @@ func formattedTime() string {
 	return time.Now().Format(GitlabReportTimePattern)
 }
 
-func Run[O any](ctx context.Context, getAnalyzer func() (Analyzer[O], error), options O) error {
+func Run[O WithGlobalOptions](ctx context.Context, getAnalyzer func() (Analyzer[O], error), options O) error {
 
 	analyzer, err := getAnalyzer()
 	if err != nil {
 		return err
 	}
 
-	pwd, _ := os.Getwd()
-	templateFile := filepath.Join(pwd, "templates", "report", analyzer.TemplateFileName())
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		return err
+	}
 
-	tempFile := filepath.Join(pwd, "temp.json")
+	templateFile := valueOrDefault(
+		options.Global().TemplatePath,
+		filepath.Join(dir, "templates", "report", analyzer.TemplateFileName()),
+	)
+
+	tempFile := filepath.Join(dir, "temp.json")
 	startTime := formattedTime()
 	_, stderr, err := execTrivyCommand(
 		ctx, analyzer.ScanCommand(tempFile, templateFile, options),
@@ -55,7 +62,19 @@ func Run[O any](ctx context.Context, getAnalyzer func() (Analyzer[O], error), op
 		return err
 	}
 
-	if err := os.WriteFile(analyzer.ReportFileName(), trivyReport.Bytes(), os.ModePerm); err != nil {
+	outPath := valueOrDefault(
+		options.Global().ReportPath,
+		filepath.Join(dir, "output"),
+	)
+
+	log.Println(outPath)
+
+	if err := os.MkdirAll(outPath, os.ModePerm); err != nil {
+		return err
+	}
+
+	reportFile := filepath.Join(outPath, analyzer.ReportFileName())
+	if err := os.WriteFile(reportFile, trivyReport.Bytes(), os.ModePerm); err != nil {
 		return err
 	}
 
@@ -81,4 +100,12 @@ func execTrivyCommand(ctx context.Context, cmds []string) (string, string, error
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	return stdout.String(), stderr.String(), err
+}
+
+func valueOrDefault(val, def string) string {
+	if val == "" {
+		return def
+	}
+
+	return val
 }

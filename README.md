@@ -57,7 +57,9 @@ Add follow to docker daemon config
 }
 ```
 - for macos ~/.docker/daemon.json
-- for linux etc/docker/daemon.json
+- for linux /etc/docker/daemon.json
+
+Ref: https://docs.docker.com/config/daemon/
 
 Restart docker service.
 
@@ -66,17 +68,19 @@ Restart docker service.
 
 1. Go to http://localhost/admin/runners
 2. Copy registration token
-3. `export REGISTRATION_TOKEN=...`
+3. `export REGISTRATION_TOKEN=U11wSDywHkJz38hCJU1_`
 
 Start register and runner
 ```shell
 docker-compose -f docker/docker-compose.runner.yaml up -d
 ```
 
-### Build plugin
+### Build plugin and run
 
 ```shell
 make build-plugin
+
+trivy plugin run $(PWD) container minio/minio:latest -- --debug=true --report-path=$(PWD)/data --template-path $(PWD)/templates/report/container-scanning.tpl
 ```
 
 ### Grant access to the directory via http

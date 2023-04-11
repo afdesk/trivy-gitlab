@@ -7,4 +7,4 @@ install:
 	@go install ./cmd/trivy-gitlab
 
 build-plugin: build
-	@tar -czf trivy-gitlab.tar.gz LICENSE plugin.yaml entrypoint trivy-gitlab
+	@tar -czf trivy-gitlab.tar.gz LICENSE plugin.yaml trivy-gitlab templates

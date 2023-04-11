@@ -1,5 +1,11 @@
 package analyzer
 
 type GlobalOptions struct {
-	Debug bool
+	Debug        bool
+	ReportPath   string
+	TemplatePath string
+}
+
+type WithGlobalOptions interface {
+	Global() GlobalOptions
 }
