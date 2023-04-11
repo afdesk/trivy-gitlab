@@ -30,6 +30,10 @@ func NewContainerAnalyzer(imgName string) (*containerAnalyzer, error) {
 	}, nil
 }
 
+func (a *containerAnalyzer) SchemaVersion() string {
+	return "14.1.2"
+}
+
 func (a *containerAnalyzer) TemplateFileName() string {
 	return a.templateFileName
 }

@@ -1,21 +1,26 @@
 package analyzer
 
 import (
-	"bytes"
 	"context"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Jeffail/gabs/v2"
 )
 
 const GitlabReportTimePattern = "2006-01-02T15:04:05"
+const UnknownVersion = "unknown"
 
-func formattedTime() string {
-	return time.Now().Format(GitlabReportTimePattern)
+type Analyzer[O any] interface {
+	ScanCommand(outputFileName, templateFile string, options O) []string
+	Convert(trivyReport *gabs.Container) error
+	SchemaVersion() string
+	TemplateFileName() string
+	ReportFileName() string
 }
 
 func Run[O WithGlobalOptions](ctx context.Context, getAnalyzer func() (Analyzer[O], error), options O) error {
@@ -37,8 +42,8 @@ func Run[O WithGlobalOptions](ctx context.Context, getAnalyzer func() (Analyzer[
 
 	tempFile := filepath.Join(dir, "temp.json")
 	startTime := formattedTime()
-	_, stderr, err := execTrivyCommand(
-		ctx, analyzer.ScanCommand(tempFile, templateFile, options),
+	_, stderr, err := execute(
+		ctx, "trivy", analyzer.ScanCommand(tempFile, templateFile, options),
 	)
 	endTime := formattedTime()
 	if err != nil {
@@ -52,9 +57,9 @@ func Run[O WithGlobalOptions](ctx context.Context, getAnalyzer func() (Analyzer[
 	}
 
 	// common properties
-	trivyReport.Set("14.1.2", "version")               // TODO schema version, move it to the analyzer?
-	trivyReport.SetP("0.0.1", "scan.analyzer.version") // TODO version of our plugin
-	trivyReport.SetP("0.0.1", "scan.scanner.version")  // TODO trivy version
+	trivyReport.Set(analyzer.SchemaVersion(), "version")
+	trivyReport.SetP(pluginVersion(), "scan.analyzer.version")
+	trivyReport.SetP(trivyVersion(), "scan.scanner.version")
 	trivyReport.SetP(startTime, "scan.start_time")
 	trivyReport.SetP(endTime, "scan.end_time")
 
@@ -66,8 +71,6 @@ func Run[O WithGlobalOptions](ctx context.Context, getAnalyzer func() (Analyzer[
 		options.Global().ReportPath,
 		filepath.Join(dir, "output"),
 	)
-
-	log.Println(outPath)
 
 	if err := os.MkdirAll(outPath, os.ModePerm); err != nil {
 		return err
@@ -85,27 +88,31 @@ func Run[O WithGlobalOptions](ctx context.Context, getAnalyzer func() (Analyzer[
 	return nil
 }
 
-type Analyzer[O any] interface {
-	ScanCommand(outputFileName, templateFile string, options O) []string
-	Convert(trivyReport *gabs.Container) error
-	TemplateFileName() string
-	ReportFileName() string
-}
-
-func execTrivyCommand(ctx context.Context, cmds []string) (string, string, error) {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, "trivy", cmds...)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	return stdout.String(), stderr.String(), err
-}
-
-func valueOrDefault(val, def string) string {
-	if val == "" {
-		return def
+func trivyVersion() string {
+	if out, msg, err := piped(
+		exec.Command("trivy", "-v"),
+		exec.Command("grep", "Version"),
+		exec.Command("awk", "FNR == 1 {print $2}"),
+	); err != nil {
+		log.Println(msg)
+		return UnknownVersion
+	} else {
+		return strings.TrimSuffix(out, "\n")
 	}
+}
 
-	return val
+func pluginVersion() string {
+	if out, msg, err := piped(
+		exec.Command("trivy", "plugin", "list"),
+		exec.Command("awk", "$2 ~ /trivy-gitlab/ { getline;print $2 }"),
+	); err != nil {
+		log.Println(msg)
+		return UnknownVersion
+	} else {
+		return strings.TrimSuffix(out, "\n")
+	}
+}
+
+func formattedTime() string {
+	return time.Now().Format(GitlabReportTimePattern)
 }
