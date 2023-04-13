@@ -28,7 +28,7 @@ func (a *containerAnalyzer) Meta() analyzer.AnalyzerMeta {
 	return analyzer.AnalyzerMeta{
 		Id:            "container-scanning",
 		Type:          "container_scanning",
-		SchemaVersion: "14.1.2",
+		SchemaVersion: "15.0.0",
 	}
 }
 
@@ -52,9 +52,7 @@ func (a *containerAnalyzer) Convert(trivyReport *gabs.Container) error {
 	for _, vuln := range trivyReport.S("vulnerabilities").Children() {
 		analyzer.FixId(vuln)
 		analyzer.FixLinks(vuln)
+		analyzer.FixImageAndOs(vuln)
 	}
-
-	// TODO: generate id
-
 	return nil
 }

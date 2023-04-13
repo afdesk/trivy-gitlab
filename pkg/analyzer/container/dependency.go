@@ -27,7 +27,7 @@ func (a *dependencyAnalyzer) Meta() analyzer.AnalyzerMeta {
 	return analyzer.AnalyzerMeta{
 		Id:            "container-dep-scanning",
 		Type:          "dependency_scanning",
-		SchemaVersion: "14.1.2",
+		SchemaVersion: "15.0.0",
 	}
 }
 

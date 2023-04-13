@@ -9,12 +9,15 @@ import (
 	"log"
 	"net/url"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/Jeffail/gabs/v2"
 	"github.com/google/uuid"
 )
+
+var httpOrHttpsProtocol = regexp.MustCompile(`^https?://.+`)
 
 func valueOrDefault(val, def string) string {
 	if val == "" {
@@ -36,7 +39,7 @@ func execute(ctx context.Context, name string, cmds []string) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	fmt.Printf("Start execute command: %s %s\n", name, strings.Join(cmds, " "))
+	log.Printf("Start execute command: %s %s\n", name, strings.Join(cmds, " "))
 
 	scanner := bufio.NewScanner(stderr)
 	for scanner.Scan() {
@@ -63,7 +66,7 @@ func piped(stack ...*exec.Cmd) (string, string, error) {
 	stack[i].Stderr = &error_buffer
 
 	if err := call(stack, pipe_stack); err != nil {
-		log.Fatalln(error_buffer.String(), err)
+		log.Println(error_buffer.String(), err)
 		return "", "", err
 	}
 	return stdout.String(), "", nil
@@ -128,23 +131,81 @@ func FixId(vuln *gabs.Container) {
 	vuln.Set(uuid.New().String(), "id")
 }
 
-// Fix follow: https://aomedia.googlesource.com/aom/+/94bcbfe76b0fd5b8ac03645082dc23a88730c949 (v2.0.1)
 func FixLinks(vuln *gabs.Container) {
-	for _, link := range vuln.Path("links").Children() {
-		vulnUrlRaw := link.Path("url").String()
-		vulnUrl, err := strconv.Unquote(vulnUrlRaw)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
 
-		if !strings.Contains(vulnUrl, " ") {
-			continue
-		}
+	links := Map2(vuln.Path("links").Children(), func(link *gabs.Container) string {
+		vulnUrlRaw, _ := link.Path("url").Data().(string)
 
-		splitedUrl := strings.Split(vulnUrl, " ")
-		if _, err := url.ParseRequestURI(splitedUrl[0]); err == nil {
-			link.SetP(splitedUrl[0], "url")
-		}
+		return fixUrlWithSpace(vulnUrlRaw)
+	})
+
+	links = Filter(links, isValidUrl)
+
+	vuln.DeleteP("links")
+
+	for _, l := range links {
+
+		vuln.ArrayAppendP(map[string]interface{}{
+			"url": l,
+		}, "links")
 	}
+}
+
+func fixUrlWithSpace(u string) string {
+	if spaceIndex := strings.Index(u, " "); spaceIndex != -1 {
+		return u[:spaceIndex]
+	}
+
+	return u
+}
+
+func isHttpOrHttps(u string) bool {
+	return httpOrHttpsProtocol.MatchString(u)
+}
+
+func isValidUrl(u string) bool {
+	url, err := url.ParseRequestURI(u)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+
+	// "ftp://ftp.sco.com/pub/updates/OpenServer/SCOSA-2005.3/SCOSA-2005.3.txt
+	if !isHttpOrHttps(url.String()) {
+		return false
+	}
+
+	return true
+}
+
+func FixImageAndOs(vuln *gabs.Container) {
+	image, ok := vuln.Path("location.image").Data().(string)
+	if !ok {
+		return
+	}
+
+	image, os, ok := extractImageAndOs(image)
+	if !ok {
+		// TODO get image from envs
+		return
+	}
+
+	vuln.SetP(image, "location.image")
+	vuln.SetP(os, "location.operating_system")
+}
+
+func extractImageAndOs(image string) (string, string, bool) {
+	index := strings.Index(image, " ")
+	if index == -1 {
+		return "", "", false
+	}
+
+	img := image[:index]
+	if !strings.Contains(img, ":") {
+		img = img + ":latest"
+	}
+
+	os := image[index+1:]
+	os = os[1 : len(os)-1]
+	return img, os, true
 }

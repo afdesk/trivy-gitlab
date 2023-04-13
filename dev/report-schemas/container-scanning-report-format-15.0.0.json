@@ -1,5 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gitlab.com/gitlab-org/security-products/security-report-schemas/-/raw/master/dist/container-scanning-report-format.json",
   "title": "Report format for GitLab Container Scanning",
   "description": "This schema provides the the report format for Container Scanning (https://docs.gitlab.com/ee/user/application_security/container_scanning).",
   "definitions": {
@@ -325,9 +326,10 @@
     }
   },
   "self": {
-    "version": "14.1.2"
+    "version": "15.0.0"
   },
   "required": [
+    "scan",
     "version",
     "vulnerabilities"
   ],
@@ -336,6 +338,7 @@
     "scan": {
       "type": "object",
       "required": [
+        "analyzer",
         "end_time",
         "scanner",
         "start_time",
@@ -346,7 +349,7 @@
         "end_time": {
           "type": "string",
           "description": "ISO8601 UTC value with format yyyy-mm-ddThh:mm:ss, representing when the scan finished.",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}\\:\\d{2}\\:\\d{2}$",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
           "examples": [
             "2020-01-28T03:26:02"
           ]
@@ -412,7 +415,6 @@
             },
             "url": {
               "type": "string",
-              "format": "uri",
               "pattern": "^https?://.+",
               "description": "A link to more information about the analyzer.",
               "examples": [
@@ -509,7 +511,7 @@
         "start_time": {
           "type": "string",
           "description": "ISO8601 UTC value with format yyyy-mm-ddThh:mm:ss, representing when the scan started.",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}\\:\\d{2}\\:\\d{2}$",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
           "examples": [
             "2020-02-14T16:01:59"
           ]
@@ -534,7 +536,7 @@
     "schema": {
       "type": "string",
       "description": "URI pointing to the validating security report schema.",
-      "format": "uri"
+      "pattern": "^https?://.+"
     },
     "version": {
       "type": "string",
@@ -548,40 +550,28 @@
         "type": "object",
         "description": "Describes the vulnerability using GitLab Flavored Markdown",
         "required": [
-          "category",
-          "cve",
+          "id",
           "identifiers",
-          "location",
-          "scanner"
+          "location"
         ],
         "properties": {
           "id": {
             "type": "string",
+            "minLength": 1,
             "description": "Unique identifier of the vulnerability. This is recommended to be a UUID.",
             "examples": [
               "642735a5-1425-428d-8d4e-3c854885a3c9"
             ]
           },
-          "category": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Describes where this vulnerability belongs (for example, SAST, Dependency Scanning, and so on)."
-          },
           "name": {
             "type": "string",
+            "maxLength": 255,
             "description": "The name of the vulnerability. This must not include the finding's specific information."
-          },
-          "message": {
-            "type": "string",
-            "description": "A short text section that describes the vulnerability. This may include the finding's specific information."
           },
           "description": {
             "type": "string",
+            "maxLength": 1048576,
             "description": "A long text section describing the vulnerability more fully."
-          },
-          "cve": {
-            "type": "string",
-            "description": "(Deprecated - use vulnerabilities[].id instead) A fingerprint string value that represents a concrete finding. This is used to determine whether two findings are same, which may not be 100% accurate. Note that this is NOT a CVE as described by https://cve.mitre.org/."
           },
           "severity": {
             "type": "string",
@@ -595,42 +585,10 @@
               "Critical"
             ]
           },
-          "confidence": {
-            "type": "string",
-            "description": "How reliable the vulnerability's assessment is. Possible values are Ignore, Unknown, Experimental, Low, Medium, High, and Confirmed. Note that some analyzers may not report all these possible values.",
-            "enum": [
-              "Ignore",
-              "Unknown",
-              "Experimental",
-              "Low",
-              "Medium",
-              "High",
-              "Confirmed"
-            ]
-          },
           "solution": {
             "type": "string",
+            "maxLength": 7000,
             "description": "Explanation of how to fix the vulnerability."
-          },
-          "scanner": {
-            "description": "Describes the scanner used to find this vulnerability.",
-            "type": "object",
-            "required": [
-              "id",
-              "name"
-            ],
-            "properties": {
-              "id": {
-                "type": "string",
-                "minLength": 1,
-                "description": "The scanner's ID, as a snake_case string."
-              },
-              "name": {
-                "type": "string",
-                "minLength": 1,
-                "description": "Human-readable name of the scanner."
-              }
-            }
           },
           "identifiers": {
             "type": "array",
@@ -657,7 +615,7 @@
                 "url": {
                   "type": "string",
                   "description": "URL of the identifier's documentation.",
-                  "format": "uri"
+                  "pattern": "^https?://.+"
                 },
                 "value": {
                   "type": "string",
@@ -683,7 +641,7 @@
                 "url": {
                   "type": "string",
                   "description": "URL of the vulnerability details document.",
-                  "format": "uri"
+                  "pattern": "^https?://.+"
                 }
               }
             }
@@ -804,10 +762,17 @@
               "dependency": {
                 "type": "object",
                 "description": "Describes the dependency of a project where the vulnerability is located.",
+                "required": [
+                  "package",
+                  "version"
+                ],
                 "properties": {
                   "package": {
                     "type": "object",
                     "description": "Provides information on the package where the vulnerability is located.",
+                    "required": [
+                      "name"
+                    ],
                     "properties": {
                       "name": {
                         "type": "string",
@@ -853,7 +818,7 @@
               "image": {
                 "type": "string",
                 "minLength": 1,
-                "pattern": "^[^:]+(:\\d+[^:]*)?:[^:]+$",
+                "pattern": "^[^:]+(:\\d+[^:]*)?:[^:]+(:[^:]+)?$",
                 "description": "The analyzed Docker image."
               },
               "default_branch_image": {
@@ -884,12 +849,16 @@
             "items": {
               "type": "object",
               "required": [
-                "cve"
+                "id"
               ],
               "properties": {
-                "cve": {
+                "id": {
                   "type": "string",
-                  "description": "(Deprecated - use vulnerabilities[].id instead) A fingerprint string value that represents a concrete finding. This is used to determine whether two findings are same, which may not be 100% accurate. Note that this is NOT a CVE as described by https://cve.mitre.org/."
+                  "minLength": 1,
+                  "description": "Unique identifier of the vulnerability. This is recommended to be a UUID.",
+                  "examples": [
+                    "642735a5-1425-428d-8d4e-3c854885a3c9"
+                  ]
                 }
               }
             }

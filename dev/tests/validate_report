@@ -3,14 +3,23 @@
 validate_report() {
     report_file=$1
 
+    if [ ! -f $report_file ]; then
+        echo "Report file does not exist"
+        exit 1
+    fi
+
     schema_version=$(jq -r '.version' $report_file)
     scan_type=$(jq -r '.scan.type' $report_file)
-
     scan_type_dash="${scan_type/_/-}"
 
-    ./dev/validate \
-        $PWD/dev/report-schemas/$scan_type_dash-report-format-$schema_version.json \
-        $report_file
+    schema_file=$PWD/dev/report-schemas/$scan_type_dash-report-format-$schema_version.json
+
+    if [ ! -f $schema_file ]; then
+        echo "Schema file $schema_file does not exist!"
+        exit 1
+    fi
+
+    ./dev/validate $schema_file $report_file
 
     rm $report_file
 }
