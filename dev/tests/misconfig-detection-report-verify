@@ -1,0 +1,12 @@
+#!/bin/bash
+
+basedir=$(dirname $0)
+
+source ./$basedir/validate_report
+
+go run ./cmd/trivy-gitlab misconfig $1 \
+    --template-path=$PWD/templates/report/misconfig-detection.tpl \
+    --report-path=$PWD \
+    --debug
+
+validate_report trivy-misconfig-detection-report.json

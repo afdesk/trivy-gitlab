@@ -1,12 +1,19 @@
 package analyzer
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"os/exec"
+	"strconv"
+	"strings"
+
+	"github.com/Jeffail/gabs/v2"
+	"github.com/google/uuid"
 )
 
 func valueOrDefault(val, def string) string {
@@ -17,15 +24,27 @@ func valueOrDefault(val, def string) string {
 	return val
 }
 
-func execute(ctx context.Context, name string, cmds []string) (string, string, error) {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
+func execute(ctx context.Context, name string, cmds []string) error {
+
 	cmd := exec.CommandContext(ctx, name, cmds...)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	fmt.Print(stdout.String())
-	return stdout.String(), stderr.String(), err
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	fmt.Printf("Start execute command: %s %s\n", name, strings.Join(cmds, " "))
+
+	scanner := bufio.NewScanner(stderr)
+	for scanner.Scan() {
+		m := scanner.Text()
+		fmt.Println(m)
+	}
+	cmd.Wait()
+	return nil
 }
 
 func piped(stack ...*exec.Cmd) (string, string, error) {
@@ -68,4 +87,64 @@ func call(stack []*exec.Cmd, pipes []*io.PipeWriter) (err error) {
 		}()
 	}
 	return stack[0].Wait()
+}
+
+func QuoteStrToInt(s string) (int, error) {
+	line, err := strconv.Unquote(s)
+	if err != nil {
+		return -1, err
+	}
+	i, err := strconv.Atoi(line)
+	if err != nil {
+		return -1, err
+	}
+
+	return i, nil
+}
+
+// Convert str line number to int
+func FixLineNumbers(vuln *gabs.Container) {
+	strLineToInt := func(path string) error {
+		rawLine := vuln.Path(path)
+
+		i, err := QuoteStrToInt(rawLine.String())
+
+		if err != nil {
+			return err
+		}
+
+		vuln.SetP(i, path)
+		return nil
+	}
+
+	for _, s := range []string{"location.start_line", "location.end_line"} {
+		if err := strLineToInt(s); err != nil {
+			log.Println(err)
+		}
+	}
+}
+
+func FixId(vuln *gabs.Container) {
+	vuln.Set(uuid.New().String(), "id")
+}
+
+// Fix follow: https://aomedia.googlesource.com/aom/+/94bcbfe76b0fd5b8ac03645082dc23a88730c949 (v2.0.1)
+func FixLinks(vuln *gabs.Container) {
+	for _, link := range vuln.Path("links").Children() {
+		vulnUrlRaw := link.Path("url").String()
+		vulnUrl, err := strconv.Unquote(vulnUrlRaw)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		if !strings.Contains(vulnUrl, " ") {
+			continue
+		}
+
+		splitedUrl := strings.Split(vulnUrl, " ")
+		if _, err := url.ParseRequestURI(splitedUrl[0]); err == nil {
+			link.SetP(splitedUrl[0], "url")
+		}
+	}
 }

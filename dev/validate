@@ -2,13 +2,8 @@
 
 function validate() {
     BASEDIR=$(dirname "$0")
-    schema_file="$BASEDIR"/"container-scanning-report-schema.json"
 
-    #    TODO: use a specific version
-    wget -O $schema_file "https://gitlab.com/gitlab-org/security-products/security-report-schemas/-/raw/v14.1.2/dist/container-scanning-report-format.json?inline=false"
-
-    ruby $BASEDIR/validate.rb $schema_file "$1"
-    trap 'rm -f -- "$schema_file"' EXIT
+    ruby $BASEDIR/validate.rb $1 $2
 }
 
 validate "$@"

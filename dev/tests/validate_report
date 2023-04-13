@@ -1,0 +1,16 @@
+#!/bin/bash
+
+validate_report() {
+    report_file=$1
+
+    schema_version=$(jq -r '.version' $report_file)
+    scan_type=$(jq -r '.scan.type' $report_file)
+
+    scan_type_dash="${scan_type/_/-}"
+
+    ./dev/validate \
+        $PWD/dev/report-schemas/$scan_type_dash-report-format-$schema_version.json \
+        $report_file
+
+    rm $report_file
+}

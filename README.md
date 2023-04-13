@@ -136,7 +136,7 @@ build_img:
         - docker push $CONTAINER_TEST_IMAGE
         - docker logout
 
-trivy_container_scanning:
+trivy-container-dind_scanning:
     stage: test
     variables:
         CS_IMAGE: $CONTAINER_TEST_IMAGE

@@ -1,5 +1,27 @@
 {{- /* Template copied from https://github.com/aquasecurity/trivy/blob/712f9eba35999cfa6ba982a620bdd4866e8f40a2/contrib/gitlab.tpl */ -}}
 {
+  "scan": {
+    "scanner": {
+      "id": "",
+      "name": "",
+      "url": "",
+      "vendor": {
+        "name": ""
+      }
+    },
+    "analyzer": {
+      "id": "",
+      "name": "",
+      "vendor": {
+        "name": ""
+      }
+    },
+    "type": "",
+    "start_time": "",
+    "end_time": "",
+    "status": "success"
+  },
+  "remediations": [],
   "vulnerabilities": [
   {{- $t_first := true }}
   {{- range . }}
@@ -77,28 +99,5 @@
     }
     {{- end -}}
   {{- end }}
-  ],
-  "remediations": [],
-  "scan": {
-    "scanner": {
-      "id": "trivy",
-      "name": "Trivy",
-      "url": "https://github.com/aquasecurity/trivy/",
-      "vendor": {
-        "name": "Aqua Security"
-      },
-      "version": "0.38.3"
-    },
-    "analyzer": {
-      "id": "trivy-gitlab",
-      "name": "trivy-gitlab plguin",
-      "vendor": {
-        "name": "afdesk"
-      }
-    },
-    "type": "container_scanning",
-    "start_time": "",
-    "end_time": "",
-    "status": "success"
-  }
+  ]
 }
