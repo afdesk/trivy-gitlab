@@ -4,8 +4,6 @@ variables:
 
 trivy-dependency_scanning:
     stage: test
-    variables:
-        GIT_STRATEGY: none
     allow_failure: true
     artifacts:
         reports:
