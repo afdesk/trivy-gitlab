@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aquasecurity/trivy/pkg/report/cyclonedx"
 	trivy "github.com/aquasecurity/trivy/pkg/types"
 	gitlab "gitlab.com/gitlab-org/security-products/analyzers/report/v3"
 	"go.uber.org/zap"
@@ -46,6 +47,7 @@ type Options struct {
 	ScanAll     bool
 	Debug       bool
 	Scanners    []string
+	CycloneDX   bool
 }
 
 const (
@@ -60,6 +62,8 @@ const (
 	analyzerName   = "trivy-gitlab"
 
 	unknownVersion = "unknown"
+
+	cyclonedxArtifactName = "trivy-cyclonedx-report.json"
 )
 
 var analyzerMetadata = gitlab.AnalyzerDetails{
@@ -97,6 +101,7 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 	if err != nil {
 		return err
 	}
+	endTime := gitlab.ScanTime(time.Now())
 	defer f.Close()
 
 	var trivyReport trivy.Report
@@ -104,6 +109,17 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 	if json.NewDecoder(f).Decode(&trivyReport); err != nil {
 		sugar.Errorf("Couldn't parse the Trivy report: %v\n", err)
 		return err
+	}
+
+	trivyVersion := getTrivyVersion()
+
+	if !options.CycloneDX {
+		sugar.Infof("Skipping CycloneDX report")
+	} else {
+		cyclonedxPath := filepath.Join(options.ArtifactDir, cyclonedxArtifactName)
+		if err := generateCycloneDXReport(ctx, cyclonedxPath, trivyReport); err != nil {
+			return err
+		}
 	}
 
 	sugar.Info("Creating reports")
@@ -122,11 +138,10 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 			return err
 		}
 
-		endTime := gitlab.ScanTime(time.Now())
 		gitlabReport.Scan.Analyzer = analyzerMetadata
-		gitlabReport.Scan.Analyzer.Version = pluginVersion()
+		gitlabReport.Scan.Analyzer.Version = getPluginVersion()
 		gitlabReport.Scan.Scanner = scannerMetadata
-		gitlabReport.Scan.Scanner.Version = trivyVersion()
+		gitlabReport.Scan.Scanner.Version = trivyVersion
 		gitlabReport.Scan.Type = gitlab.Category(converter.Meta().ScanType)
 		gitlabReport.Scan.StartTime = &startTime
 		gitlabReport.Scan.EndTime = &endTime
@@ -156,6 +171,21 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 
 	return nil
 
+}
+
+func generateCycloneDXReport(ctx context.Context, path string, r trivy.Report) error {
+	cyclonedxReport, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer cyclonedxReport.Close()
+	log.Println("Generating CycloneDX report")
+	writer := cyclonedx.NewWriter(cyclonedxReport, "ff")
+	if err := writer.Write(r); err != nil {
+		return err
+	}
+	log.Println("CycloneDX report saved to %s", path)
+	return nil
 }
 
 func scan(ctx context.Context, cmd string, options *Options) (io.ReadCloser, error) {
@@ -204,7 +234,7 @@ func execute(ctx context.Context, name string, cmds []string) error {
 	return cmd.Wait()
 }
 
-func trivyVersion() string {
+func getTrivyVersion() string {
 	if out, _, err := piped(
 		exec.Command("trivy", "-v"),
 		exec.Command("grep", "Version"),
@@ -216,7 +246,7 @@ func trivyVersion() string {
 	}
 }
 
-func pluginVersion() string {
+func getPluginVersion() string {
 	if out, _, err := piped(
 		exec.Command("trivy", "plugin", "list"),
 		exec.Command("awk", "$2 ~ /trivy-gitlab/ { getline;print $2 }"),
