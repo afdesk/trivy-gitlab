@@ -1,5 +1,5 @@
 include:
-    - remote: 'https://271f-176-67-55-113.ngrok-free.app/templates/jobs/container-scanning.gitlab-ci.yml'
+    - remote: 'https://d8e0-64-225-69-54.ngrok-free.app/templates/jobs/container-scanning.gitlab-ci.yml'
 
 stages:
     - build
@@ -18,7 +18,7 @@ build_img:
         - docker push $CONTAINER_TEST_IMAGE
         - docker logout
 
-trivy-container-socket_scanning:
+trivy-container_scanning:
     stage: test
     variables:
         CS_IMAGE: $CONTAINER_TEST_IMAGE

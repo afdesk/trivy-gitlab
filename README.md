@@ -4,41 +4,6 @@
 
 ### Container scanning
 
-#### Docker-in-Docker
-
-```yaml
-image: docker:20.10
-
-services:
-    - docker:20.10-dind
-
-include:
-    - remote: 'https://raw.githubusercontent.com/afdesk/trivy-gitlab/main/templates/jobs/container-scanning.gitlab-ci.yml'
-
-variables:
-    CONTAINER_TEST_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
-    DOCKER_TLS_CERTDIR: '/certs'
-
-stages:
-    - build
-    - test
-
-build_img:
-    stage: build
-    script:
-        - docker build -t $CONTAINER_TEST_IMAGE
-        - docker login -u “$CI_REGISTRY_USER” -p “$CI_REGISTRY_PASSWORD” $CI_REGISTRY
-        - docker push $CONTAINER_TEST_IMAGE
-        - docker logout
-
-trivy-container-dind_scanning:
-    stage: test
-    variables:
-        CS_IMAGE: python
-```
-
-#### Docker socket binding
-
 ```yaml
 
 include:
@@ -59,7 +24,7 @@ build_img:
         - docker push $CONTAINER_TEST_IMAGE
         - docker logout
 
-trivy-container-socket_scanning:
+trivy-container_scanning:
     stage: test
     variables:
         CS_IMAGE: $CONTAINER_TEST_IMAGE

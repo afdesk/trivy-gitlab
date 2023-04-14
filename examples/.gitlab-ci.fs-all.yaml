@@ -1,0 +1,7 @@
+include:
+    - remote: 'https://d8e0-64-225-69-54.ngrok-free.app/templates/jobs/dependency-scanning.gitlab-ci.yml'
+    - remote: 'https://d8e0-64-225-69-54.ngrok-free.app/templates/jobs/misconfig-detection.gitlab-ci.yml'
+    - remote: 'https://d8e0-64-225-69-54.ngrok-free.app/templates/jobs/secret-detection.gitlab-ci.yml'
+
+stages:
+    - test
