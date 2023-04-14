@@ -4,6 +4,9 @@
 
 ### Container scanning
 
+
+Example for docker socket binding
+
 ```yaml
 
 include:
@@ -35,12 +38,20 @@ trivy-container_scanning:
 
 ```yaml
 include:
-    - remote: 'https://raw.githubusercontent.com/afdesk/trivy-gitlab/main/templates/jobs/dependency-scanning.gitlab-ci.yml'
-    - remote: 'https://raw.githubusercontent.com/afdesk/trivy-gitlab/main/templates/jobs/misconfig-detection.gitlab-ci.yml'
-    - remote: 'https://raw.githubusercontent.com/afdesk/trivy-gitlab/main/templates/jobs/secret-detection.gitlab-ci.yml'
+    - remote: 'https://raw.githubusercontent.com/afdesk/trivy-gitlab/main/templates/jobs/fs-scanning.gitlab-ci.yml'
 
 stages:
     - test
 
 
 ```
+
+If you use docker-in-docker just add follow:
+
+```yaml
+image: docker:20.10
+
+services:
+    - docker:20.10-dind
+```
+

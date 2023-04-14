@@ -1,8 +1,11 @@
 package analyzer
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -10,129 +13,203 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Jeffail/gabs/v2"
+	trivy "github.com/aquasecurity/trivy/pkg/types"
+	gitlab "gitlab.com/gitlab-org/security-products/analyzers/report/v3"
+	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 )
 
-const gitlabReportTimePattern = "2006-01-02T15:04:05"
-const unknownVersion = "unknown"
-
-type Analyzer[O any] interface {
-	Meta() AnalyzerMeta
-	ScanCommand(outputFileName, templateFile string, options O) []string
-	Convert(trivyReport *gabs.Container) error
+type Env struct {
 }
 
-type AnalyzerMeta struct {
-	Id            string
-	Type          string
-	SchemaVersion string
+type ConverterMeta struct {
+	ID            string
+	ScanType      gitlab.Category
+	TrivyScanner  string
+	ReportVersion gitlab.Version
 }
 
-func Run[O WithGlobalOptions](
-	ctx context.Context,
-	getAnalyzer func() (Analyzer[O], error), options O,
-) error {
+type Converter interface {
+	Meta() ConverterMeta
+	Convert(r *trivy.Report) (*gitlab.Report, error)
+	Skip(o *Options, env Env) bool
+}
 
-	analyzer, err := getAnalyzer()
+type SecurityAnalyzer interface {
+	ScanCmd(options Options) (string, error)
+	Converters() []Converter
+}
+
+type Options struct {
+	Target      string
+	ArtifactDir string
+	ScanAll     bool
+	Debug       bool
+	Scanners    []string
+}
+
+const (
+	scannerVendor = "Aqua Security"
+	scannerURL    = "https://github.com/aquasecurity/trivy/"
+	scannerID     = "trivy"
+	scannerName   = "Trivy"
+
+	analyzerVendor = "afdesk"
+	analyzerURL    = "https://github.com/afdesk/trivy-gitlab"
+	analyzerID     = "trivy-gitlab"
+	analyzerName   = "trivy-gitlab"
+
+	unknownVersion = "unknown"
+)
+
+var analyzerMetadata = gitlab.AnalyzerDetails{
+	Vendor: gitlab.Vendor{Name: analyzerVendor},
+	URL:    analyzerURL,
+	ID:     analyzerID,
+	Name:   analyzerName,
+}
+
+var scannerMetadata = gitlab.ScannerDetails{
+	Vendor: gitlab.Vendor{Name: scannerVendor},
+	URL:    scannerURL,
+	ID:     scannerID,
+	Name:   scannerName,
+}
+
+func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error {
+
+	if len(options.Scanners) == 0 {
+		return fmt.Errorf("no scanners specified")
+	}
+
+	logger, _ := zap.NewDevelopment()
+	defer logger.Sync()
+	sugar := logger.Sugar()
+
+	startTime := gitlab.ScanTime(time.Now())
+
+	sugar.Info("Running analyzer")
+	scanCmd, err := analyzer.ScanCmd(*options)
 	if err != nil {
 		return err
 	}
-
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	f, err := scan(ctx, scanCmd, options)
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
-	templateFile := valueOrDefault(
-		options.Global().TemplatePath,
-		filepath.Join(dir, "templates", "report", fmt.Sprintf("%s.tpl", analyzer.Meta().Id)),
-	)
+	var trivyReport trivy.Report
 
-	trivyOutputFile := filepath.Join(dir, "temp.json")
-	scanCommand := analyzer.ScanCommand(trivyOutputFile, templateFile, options)
-
-	if options.Global().Debug {
-		scanCommand = append(scanCommand, "--offline-scan", "--skip-db-update")
-	}
-
-	scan := func() error {
-		return execute(ctx, "trivy", scanCommand)
-	}
-	startScanTime, endScanTime, err := formattedMeasure(scan)
-	if err != nil {
+	if json.NewDecoder(f).Decode(&trivyReport); err != nil {
+		sugar.Errorf("Couldn't parse the Trivy report: %v\n", err)
 		return err
 	}
 
-	trivyReport, err := gabs.ParseJSONFile(trivyOutputFile)
-	if err != nil {
-		return err
-	}
+	sugar.Info("Creating reports")
+	for _, converter := range analyzer.Converters() {
 
-	// common properties
-	trivyReport.Set(analyzer.Meta().SchemaVersion, "version")
-	trivyReport.SetP(analyzer.Meta().Type, "scan.type")
-	trivyReport.SetP("trivy-gitlab", "scan.analyzer.id")
-	trivyReport.SetP("trivy-gitlab plguin", "scan.analyzer.name")
-	trivyReport.SetP("afdesk", "scan.analyzer.vendor.name")
-	trivyReport.SetP(pluginVersion(), "scan.analyzer.version")
+		converterId := converter.Meta().ID
 
-	trivyReport.SetP("trivy", "scan.scanner.id")
-	trivyReport.SetP("Trivy", "scan.scanner.name")
-	trivyReport.SetP("https://github.com/aquasecurity/trivy/", "scan.scanner.url")
-	trivyReport.SetP("Aqua Security", "scan.scanner.vendor.name")
-	trivyReport.SetP(trivyVersion(), "scan.scanner.version")
+		if !slices.Contains(options.Scanners, converter.Meta().TrivyScanner) || converter.Skip(options, Env{}) {
+			sugar.Infof("Skipping %s", converterId)
+			continue
+		}
 
-	trivyReport.SetP(startScanTime, "scan.start_time")
-	trivyReport.SetP(endScanTime, "scan.end_time")
+		sugar.Infof("Converting %s", converterId)
+		gitlabReport, err := converter.Convert(&trivyReport)
+		if err != nil {
+			return err
+		}
 
-	if err := analyzer.Convert(trivyReport); err != nil {
-		return err
-	}
+		endTime := gitlab.ScanTime(time.Now())
+		gitlabReport.Scan.Analyzer = analyzerMetadata
+		gitlabReport.Scan.Analyzer.Version = pluginVersion()
+		gitlabReport.Scan.Scanner = scannerMetadata
+		gitlabReport.Scan.Scanner.Version = trivyVersion()
+		gitlabReport.Scan.Type = gitlab.Category(converter.Meta().ScanType)
+		gitlabReport.Scan.StartTime = &startTime
+		gitlabReport.Scan.EndTime = &endTime
+		gitlabReport.Scan.Status = gitlab.StatusSuccess
 
-	outPath := valueOrDefault(
-		options.Global().ReportPath,
-		filepath.Join(dir, "output"),
-	)
+		gitlabReport.Version = converter.Meta().ReportVersion
 
-	if err := os.MkdirAll(outPath, os.ModePerm); err != nil {
-		return err
-	}
+		artifactName := fmt.Sprintf("trivy-%s-report.json", converterId)
+		artifactPath := filepath.Join(options.ArtifactDir, artifactName)
 
-	reportFile := filepath.Join(outPath, fmt.Sprintf("trivy-%s-report.json", analyzer.Meta().Id))
-	if err := os.WriteFile(reportFile, trivyReport.Bytes(), os.ModePerm); err != nil {
-		return err
-	}
+		artifactFile, err := os.OpenFile(artifactPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			return err
+		}
 
-	if err := os.Remove(trivyOutputFile); err != nil {
-		return err
+		defer artifactFile.Close()
+
+		enc := json.NewEncoder(artifactFile)
+
+		if err := enc.Encode(gitlabReport); err != nil {
+			return err
+		}
+
+		sugar.Infof("Report saved to %s", artifactPath)
+
 	}
 
 	return nil
+
 }
 
-func formatTime(t time.Time) string {
-	return t.Format(gitlabReportTimePattern)
+func scan(ctx context.Context, cmd string, options *Options) (io.ReadCloser, error) {
+	tmpFile, err := os.CreateTemp("", "trivy-report-*.json")
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer tmpFile.Close()
+
+	cmds := strings.Split(cmd, " ")
+	cmds = append(cmds, "--format", "json", "--output", tmpFile.Name(), "--no-progress", "--list-all-pkgs")
+	cmds = append(cmds, "--scanners", strings.Join(options.Scanners, ","))
+
+	if options.Debug {
+		cmds = append(cmds, "--offline-scan", "--skip-db-update")
+	}
+
+	if err := execute(ctx, "trivy", cmds); err != nil {
+		return nil, err
+	}
+
+	return os.Open(tmpFile.Name())
 }
 
-func formattedMeasure(f func() error) (string, string, error) {
-	start, end, err := measure(f)
-	return formatTime(start), formatTime(end), err
-}
+func execute(ctx context.Context, name string, cmds []string) error {
 
-func measure(f func() error) (time.Time, time.Time, error) {
-	start := time.Now()
-	err := f()
-	end := time.Now()
-	return start, end, err
+	cmd := exec.CommandContext(ctx, name, cmds...)
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	log.Printf("Start execute command: %s %s\n", name, strings.Join(cmds, " "))
+
+	scanner := bufio.NewScanner(stderr)
+	for scanner.Scan() {
+		m := scanner.Text()
+		fmt.Println(m)
+	}
+	return cmd.Wait()
 }
 
 func trivyVersion() string {
-	if out, msg, err := piped(
+	if out, _, err := piped(
 		exec.Command("trivy", "-v"),
 		exec.Command("grep", "Version"),
 		exec.Command("awk", "FNR == 1 {print $2}"),
 	); err != nil {
-		log.Println(msg)
 		return unknownVersion
 	} else {
 		return strings.TrimSuffix(out, "\n")
@@ -140,11 +217,10 @@ func trivyVersion() string {
 }
 
 func pluginVersion() string {
-	if out, msg, err := piped(
+	if out, _, err := piped(
 		exec.Command("trivy", "plugin", "list"),
 		exec.Command("awk", "$2 ~ /trivy-gitlab/ { getline;print $2 }"),
 	); err != nil {
-		log.Println(msg)
 		return unknownVersion
 	} else {
 		return strings.TrimSuffix(out, "\n")

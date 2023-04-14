@@ -2,12 +2,22 @@ variables:
     TRIVY_TAG: '0.39.1'
     TRIVY_IMAGE: 'aquasec/trivy:$TRIVY_TAG'
 
-trivy-misconfig_detection:
+trivy-fs_scanning:
+    artifacts:
+        paths:
+            # - trivy-cyclonedx-report.json
+            - trivy-misconfig-detection-report.json
+            - trivy-secret-detection-report.json
+            - trivy-dependency-scanning-report.json
+        reports:
+            # cyclonedx: trivy-cyclonedx-report.json
+            sast: trivy-misconfig-detection-report.json
+            dependency_scanning: trivy-dependency-scanning-report.json
+            secret_detection: trivy-secret-detection-report.json
+
     stage: test
     allow_failure: true
-    artifacts:
-        reports:
-            sast: trivy-misconfig-detection-report.json
+
     script:
         - >
             docker pull $TRIVY_IMAGE
@@ -19,18 +29,14 @@ trivy-misconfig_detection:
                     -v /var/run/docker.sock:/var/run/docker.sock \
                     -v ${CI_PROJECT_DIR}:/glproject \
                     $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
-                    misconfig /glproject -- --report-path="/glproject"
+                    fs -- --target=/glproject --report-path="/glproject"
             else
                 docker run --rm \
                     -v /var/run/docker.sock:/var/run/docker.sock \
                     --volumes-from ${CONTAINER_ID} \
                     $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
-                    misconfig $CI_PROJECT_DIR -- --report-path=${CI_PROJECT_DIR}
+                    fs -- --target=$CI_PROJECT_DIR --artifact-dir=$CI_PROJECT_DIR
             fi
 
     rules:
-        - if: $SAST_DISABLED
-          when: never
-        - if: $SAST_EXCLUDED_ANALYZERS =~ /trivy-gitlab/
-          when: never
         - if: $CI_COMMIT_BRANCH

@@ -4,7 +4,7 @@ validate_report() {
     report_file=$1
 
     if [ ! -f $report_file ]; then
-        echo "Report file does not exist"
+        echo "Report file $report_file does not exist!"
         exit 1
     fi
 
@@ -22,4 +22,14 @@ validate_report() {
     ./dev/validate $schema_file $report_file
 
     rm $report_file
+}
+
+validate_reports() {
+    reports=("$@")
+
+    for report in "${reports[@]}"; do
+        echo "Validating $report"
+        validate_report $report
+        echo "Validation of $report done"
+    done
 }

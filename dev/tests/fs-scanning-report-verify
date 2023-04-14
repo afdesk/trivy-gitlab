@@ -1,0 +1,21 @@
+#!/bin/bash
+
+basedir=$(dirname $0)
+
+source ./$basedir/validate_report
+
+echo "Running trivy-gitlab fs scan on $1"
+
+go run ./cmd/trivy-gitlab fs \
+    --target $1 \
+    --artifact-dir=$PWD \
+    --scanners=vuln,config,secret \
+    --debug
+
+reports=(
+    "trivy-dependency-scanning-report.json"
+    "trivy-misconfig-detection-report.json"
+    "trivy-secret-detection-report.json"
+)
+
+validate_reports "${reports[@]}"
