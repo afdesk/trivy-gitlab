@@ -1,7 +1,14 @@
 package analyzer
 
 import (
+	"bufio"
 	"fmt"
+	"log"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/aquasecurity/trivy/pkg/types"
 	"gitlab.com/gitlab-org/security-products/analyzers/report/v3"
@@ -18,8 +25,8 @@ func NewFsAnalyzer() *fsAnalyzer {
 	return &fsAnalyzer{}
 }
 
-func (a *fsAnalyzer) ScanCmd(options Options) (string, error) {
-	return fmt.Sprintf("fs %s", options.Target), nil
+func (a *fsAnalyzer) ScanCmd(options Options) ([]string, error) {
+	return []string{"fs", options.Target}, nil
 }
 
 func (a *fsAnalyzer) Converters() []Converter {
@@ -113,8 +120,8 @@ func (c *secretsConverter) Convert(r *types.Report) (*report.Report, error) {
 
 	gitlabReport := report.NewReport()
 
-	for _, r := range r.Results {
-		for _, vuln := range r.Secrets {
+	for _, res := range r.Results {
+		for _, vuln := range res.Secrets {
 			v := report.Vulnerability{
 				Severity:    ConvertSeverity(vuln.Severity),
 				Name:        vuln.Title,
@@ -127,12 +134,8 @@ func (c *secretsConverter) Convert(r *types.Report) (*report.Report, error) {
 					},
 				},
 				Location: report.Location{
-					File: r.Target,
-					// TODO use git diff to get the commit
-
-					Commit: &report.Commit{
-						Sha: "TODO",
-					},
+					File:      res.Target,
+					Commit:    GetCommitWithSecret(r.ArtifactName, res.Target, vuln.StartLine),
 					LineStart: vuln.StartLine,
 					LineEnd:   vuln.EndLine,
 				},
@@ -143,6 +146,97 @@ func (c *secretsConverter) Convert(r *types.Report) (*report.Report, error) {
 	}
 
 	return &gitlabReport, nil
+}
+
+const defaultSha = "0000000"
+
+func GetCommitWithSecret(path, target string, line int) *report.Commit {
+	blame, err := getBlame(path, target, line)
+	if err != nil {
+		return &report.Commit{
+			Sha: defaultSha,
+		}
+	}
+	return &report.Commit{
+		Sha:     blame.Sha,
+		Author:  blame.Committer,
+		Message: blame.Summary,
+		Date:    blame.CommitterTime,
+	}
+}
+
+func getBlame(path, target string, line int) (*BlameOutput, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+
+	filePath := filepath.Join(abs, target)
+	out, errMsg, err := piped(
+		exec.Command("git", "blame", "--line-porcelain", "-L", fmt.Sprintf("%d,%d", line, line), filePath),
+	)
+
+	if err != nil {
+		log.Println(errMsg)
+		return nil, err
+	}
+
+	return parseBlameOutput(out)
+}
+
+func parseBlameOutput(out string) (*BlameOutput, error) {
+	scanner := bufio.NewScanner(strings.NewReader(out))
+	blame := BlameOutput{}
+
+	scanner.Scan()
+	fiestLine := scanner.Text()
+
+	if fiestLine == "" {
+		return nil, fmt.Errorf("no blame found")
+	}
+
+	splited := strings.SplitN(fiestLine, " ", 2)
+	if len(splited) < 1 {
+		return nil, fmt.Errorf("invalid blame output")
+	}
+
+	blame.Sha = splited[0]
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		splited := strings.SplitN(line, " ", 2)
+		if len(splited) != 2 {
+			continue
+		}
+		field, value := splited[0], splited[1]
+
+		if field == "committer" {
+			blame.Committer = value
+		}
+		if field == "summary" {
+			blame.Summary = value
+		}
+
+		if field == "committer-time" {
+			i, err := strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+
+			blame.CommitterTime = time.Unix(i, 0).String()
+		}
+	}
+
+	return &blame, nil
+}
+
+// 2021-12-03 15:30:55 -0600 CST
+
+type BlameOutput struct {
+	Sha           string
+	Committer     string
+	Summary       string
+	CommitterTime string
 }
 
 type misconfigConverter struct{}

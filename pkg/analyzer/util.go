@@ -14,24 +14,24 @@ var httpOrHttpsProtocol = regexp.MustCompile(`^https?://.+`)
 
 func piped(stack ...*exec.Cmd) (string, string, error) {
 	var stdout bytes.Buffer
-	var error_buffer bytes.Buffer
-	pipe_stack := make([]*io.PipeWriter, len(stack)-1)
+	var errorBuffer bytes.Buffer
+	pipeStack := make([]*io.PipeWriter, len(stack)-1)
 	i := 0
 	for ; i < len(stack)-1; i++ {
 		stdin_pipe, stdout_pipe := io.Pipe()
 		stack[i].Stdout = stdout_pipe
-		stack[i].Stderr = &error_buffer
+		stack[i].Stderr = &errorBuffer
 		stack[i+1].Stdin = stdin_pipe
-		pipe_stack[i] = stdout_pipe
+		pipeStack[i] = stdout_pipe
 	}
 	stack[i].Stdout = &stdout
-	stack[i].Stderr = &error_buffer
+	stack[i].Stderr = &errorBuffer
 
-	if err := call(stack, pipe_stack); err != nil {
-		log.Println(error_buffer.String(), err)
+	if err := call(stack, pipeStack); err != nil {
+		log.Println(errorBuffer.String(), err)
 		return "", "", err
 	}
-	return stdout.String(), "", nil
+	return stdout.String(), errorBuffer.String(), nil
 }
 
 func call(stack []*exec.Cmd, pipes []*io.PipeWriter) (err error) {

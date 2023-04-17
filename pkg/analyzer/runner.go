@@ -37,7 +37,7 @@ type Converter interface {
 }
 
 type SecurityAnalyzer interface {
-	ScanCmd(options Options) (string, error)
+	ScanCmd(options Options) ([]string, error)
 	Converters() []Converter
 }
 
@@ -184,11 +184,11 @@ func generateCycloneDXReport(ctx context.Context, path string, r trivy.Report) e
 	if err := writer.Write(r); err != nil {
 		return err
 	}
-	log.Println("CycloneDX report saved to %s", path)
+	log.Printf("CycloneDX report saved to %s", path)
 	return nil
 }
 
-func scan(ctx context.Context, cmd string, options *Options) (io.ReadCloser, error) {
+func scan(ctx context.Context, cmd []string, options *Options) (io.ReadCloser, error) {
 	tmpFile, err := os.CreateTemp("", "trivy-report-*.json")
 
 	if err != nil {
@@ -197,8 +197,7 @@ func scan(ctx context.Context, cmd string, options *Options) (io.ReadCloser, err
 
 	defer tmpFile.Close()
 
-	cmds := strings.Split(cmd, " ")
-	cmds = append(cmds, "--format", "json", "--output", tmpFile.Name(), "--no-progress", "--list-all-pkgs")
+	cmds := append(cmd, "--format", "json", "--output", tmpFile.Name(), "--no-progress", "--list-all-pkgs")
 	cmds = append(cmds, "--scanners", strings.Join(options.Scanners, ","))
 
 	if options.Debug {

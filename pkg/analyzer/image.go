@@ -15,8 +15,8 @@ func NewImageAnalyzer() *imageAnalyzer {
 	return &imageAnalyzer{}
 }
 
-func (a *imageAnalyzer) ScanCmd(options Options) (string, error) {
-	return fmt.Sprintf("image %s", options.Target), nil
+func (a *imageAnalyzer) ScanCmd(options Options) ([]string, error) {
+	return []string{"image", options.Target}, nil
 }
 
 func (a *imageAnalyzer) Converters() []Converter {

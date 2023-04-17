@@ -5,3 +5,6 @@
 trivy-gitlab
 **/certs
 **/*.pem
+
+!dev/tests/fixtures/rep1/
+!dev/tests/fixtures/rep1/*
