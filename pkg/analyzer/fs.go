@@ -54,6 +54,11 @@ func (c *dependencyConverter) Meta() ConverterMeta {
 }
 
 func (c *dependencyConverter) Skip(o *Options, env Env) bool {
+
+	if isScanningDisabled("DEPENDENCY_SCANNING_DISABLED") {
+		log.Println("Skipping dependency scanning because DEPENDENCY_SCANNING_DISABLED is set")
+		return true
+	}
 	return false
 }
 
@@ -113,6 +118,10 @@ func (c *secretsConverter) Meta() ConverterMeta {
 }
 
 func (c *secretsConverter) Skip(o *Options, env Env) bool {
+	if isScanningDisabled("SAST_DISABLED") {
+		log.Println("Skipping secrets detection because SAST_DISABLED is set")
+		return true
+	}
 	return false
 }
 
@@ -229,8 +238,6 @@ func parseBlameOutput(out string) (*BlameOutput, error) {
 
 	return &blame, nil
 }
-
-// 2021-12-03 15:30:55 -0600 CST
 
 type BlameOutput struct {
 	Sha           string

@@ -2,21 +2,31 @@ package analyzer
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"strings"
 
 	"github.com/aquasecurity/trivy/pkg/types"
 	"gitlab.com/gitlab-org/security-products/analyzers/report/v3"
 )
 
-type imageAnalyzer struct {
-}
+type imageAnalyzer struct{}
 
 func NewImageAnalyzer() *imageAnalyzer {
 	return &imageAnalyzer{}
 }
 
 func (a *imageAnalyzer) ScanCmd(options Options) ([]string, error) {
-	return []string{"image", options.Target}, nil
+	target := options.Target
+	if target == "" {
+		imageName, err := extractImageName()
+		if err != nil {
+			return nil, fmt.Errorf("failed to extract image name: %w", err)
+		}
+		target = imageName
+	}
+
+	return []string{"image", target}, nil
 }
 
 func (a *imageAnalyzer) Converters() []Converter {
@@ -42,6 +52,10 @@ func (c *containerConverter) Meta() ConverterMeta {
 }
 
 func (c *containerConverter) Skip(o *Options, env Env) bool {
+	if isScanningDisabled("CONTAINER_SCANNING_DISABLED") {
+		log.Println("Skipping container scanning because CONTAINER_SCANNING_DISABLED is set")
+		return true
+	}
 	return false
 }
 
@@ -121,4 +135,58 @@ func (c *containerDepConverter) Convert(r *types.Report) (*report.Report, error)
 			return r.Class == types.ClassOSPkg
 		}),
 	}, nil
+}
+
+func extractImageName() (string, error) {
+
+	if value, ok := os.LookupEnv("CS_IMAGE"); ok {
+		return value, nil
+	}
+	if value, ok := os.LookupEnv("DOCKER_IMAGE"); ok {
+		return value, nil
+	}
+
+	applicationRepository, err := getApplicationRepository()
+	if err != nil {
+		return "", err
+	}
+
+	applicationTag, err := getApplicationTag()
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s:%s", applicationRepository, applicationTag), nil
+}
+
+func getApplicationRepository() (string, error) {
+	if value, ok := os.LookupEnv("CI_APPLICATION_REPOSITORY"); ok {
+		return value, nil
+	}
+
+	return getDefaultApplicationRepository()
+}
+
+func getApplicationTag() (string, error) {
+
+	if value, ok := os.LookupEnv("CI_APPLICATION_TAG"); ok {
+		return value, nil
+	}
+
+	return getEnvOrError("CI_COMMIT_SHA")
+
+}
+
+func getDefaultApplicationRepository() (string, error) {
+
+	registryImage, err := getEnvOrError("CI_REGISTRY_IMAGE")
+	if err != nil {
+		return "", err
+	}
+
+	commitRefSlug, err := getEnvOrError("CI_COMMIT_REF_SLUG")
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s/%s", registryImage, commitRefSlug), nil
 }

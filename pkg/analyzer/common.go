@@ -2,6 +2,7 @@ package analyzer
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	ftypes "github.com/aquasecurity/trivy/pkg/fanal/types"
@@ -40,4 +41,11 @@ func MakeSolution(vuln types.DetectedVulnerability) string {
 		return fmt.Sprintf("Upgrade %s to version %s", vuln.PkgName, vuln.FixedVersion)
 	}
 	return ""
+}
+
+func isScanningDisabled(key string) bool {
+	if scanningDisabled, ok := os.LookupEnv(key); ok && scanningDisabled == "true" {
+		return true
+	}
+	return false
 }

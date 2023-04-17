@@ -2,9 +2,11 @@ package analyzer
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"net/url"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -71,10 +73,15 @@ func isValidUrl(u string) bool {
 		log.Println(err)
 		return false
 	}
+	return isHttpOrHttps(url.String())
+}
 
-	// "ftp://ftp.sco.com/pub/updates/OpenServer/SCOSA-2005.3/SCOSA-2005.3.txt
-	if !isHttpOrHttps(url.String()) {
-		return false
+func getEnvOrError(key string) (string, error) {
+	if value, ok := os.LookupEnv(key); ok {
+		if value == "" {
+			return "", fmt.Errorf("environment variable %s is empty but is required for execution", key)
+		}
+		return value, nil
 	}
-	return true
+	return "", fmt.Errorf("none of the environment variables %s were found but are required for execution", key)
 }
