@@ -79,7 +79,12 @@ var DEFAULT_SCANNERS = []string{"vuln", "secret", "config"}
 func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error {
 
 	logger, _ := zap.NewDevelopment()
-	defer logger.Sync()
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			log.Printf("failed to sync logger %v", err)
+		}
+	}()
+
 	sugar := logger.Sugar()
 
 	startTime := gitlab.ScanTime(time.Now())
