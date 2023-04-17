@@ -33,7 +33,7 @@ trivy-container_scanning:
                     --env-file <(env | grep 'CI\|TS') \
                     -e DOCKER_IMAGE \
                     -e CONTAINER_SCANNING_DISABLED \
-                    $TRIVY_IMAGE plugin run http://25e9-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
+                    $TRIVY_IMAGE plugin run github.com/afdesk/trivy-gitlab \
                     container -- --target=$TS_IMAGE --artifact-dir="/glproject"
             else
                 docker run --rm \
@@ -42,6 +42,6 @@ trivy-container_scanning:
                     --env-file <(env | grep 'CI\|TS') \
                     -e DOCKER_IMAGE \
                     -e CONTAINER_SCANNING_DISABLED \
-                    $TRIVY_IMAGE plugin run http://25e9-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
+                    $TRIVY_IMAGE plugin run github.com/afdesk/trivy-gitlab \
                     container -- --target=$TS_IMAGE --artifact-dir="${CI_PROJECT_DIR}"
             fi

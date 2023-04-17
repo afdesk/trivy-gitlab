@@ -4,13 +4,12 @@
 
 ### Container scanning
 
-
 Example for docker socket binding
 
 ```yaml
 
 include:
-    - remote: 'https://raw.githubusercontent.com/afdesk/main/trivy-gitlab/templates/jobs/container-scanning.gitlab-ci.yml'
+    - remote: 'https://raw.githubusercontent.com/afdesk/trivy-gitlab/main/templates/jobs/container-scanning.gitlab-ci.yml'
 
 variables:
     CONTAINER_TEST_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
@@ -30,7 +29,7 @@ build_img:
 trivy-container_scanning:
     stage: test
     variables:
-        CS_IMAGE: $CONTAINER_TEST_IMAGE
+        TS_IMAGE: $CONTAINER_TEST_IMAGE
 
 ```
 
@@ -50,7 +49,7 @@ trivy-fs_scanning:
 
 ```
 
-If you use docker-in-docker just add follow:
+If you are using docker-in-docker, just add the following:
 
 ```yaml
 image: docker:20.10

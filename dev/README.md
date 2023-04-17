@@ -117,7 +117,7 @@ platforms:
 
 ```yaml
 include:
-    - remote: 'https://214f-92-124-160-226.ngrok-free.app/templates/jobs/container-scanning.gitlab-ci.yml'
+    - remote: '<ngrok url>/templates/jobs/container-scanning.gitlab-ci.yml'
 
 stages:
     - build
@@ -136,8 +136,8 @@ build_img:
         - docker push $CONTAINER_TEST_IMAGE
         - docker logout
 
-trivy-container-dind_scanning:
+trivy-container_scanning:
     stage: test
     variables:
-        CS_IMAGE: $CONTAINER_TEST_IMAGE
+        TS_IMAGE: $CONTAINER_TEST_IMAGE
 ```
