@@ -15,8 +15,7 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&globalOptions.Debug, "debug", false, "Debug mode")
 	rootCmd.PersistentFlags().StringVar(&globalOptions.Target, "target", "", "Target")
 	rootCmd.PersistentFlags().StringVar(&globalOptions.ArtifactDir, "artifact-dir", "", "Artifact directory")
-	rootCmd.PersistentFlags().BoolVar(&globalOptions.ScanAll, "scan-all", false, "Scan all files")
-	rootCmd.PersistentFlags().StringSliceVar(&globalOptions.Scanners, "scanners", []string{"vuln"}, "Scanners")
+	rootCmd.PersistentFlags().BoolVar(&globalOptions.CycloneDX, "cyclonedx", true, "CycloneDX artifact")
 
 	rootCmd.AddCommand(
 		ContainerScanningCommand(globalOptions),

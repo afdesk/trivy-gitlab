@@ -20,9 +20,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type Env struct {
-}
-
 type ConverterMeta struct {
 	ID            string
 	ScanType      gitlab.Category
@@ -33,20 +30,18 @@ type ConverterMeta struct {
 type Converter interface {
 	Meta() ConverterMeta
 	Convert(r *trivy.Report) (*gitlab.Report, error)
-	Skip(o *Options, env Env) bool
 }
 
 type SecurityAnalyzer interface {
 	ScanCmd(options Options) ([]string, error)
 	Converters() []Converter
+	ResolveScanners(scanners []string) []string
 }
 
 type Options struct {
 	Target      string
 	ArtifactDir string
-	ScanAll     bool
 	Debug       bool
-	Scanners    []string
 	CycloneDX   bool
 }
 
@@ -80,11 +75,9 @@ var scannerMetadata = gitlab.ScannerDetails{
 	Name:   scannerName,
 }
 
-func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error {
+var DEFAULT_SCANNERS = []string{"vuln", "secret", "config"}
 
-	if len(options.Scanners) == 0 {
-		return fmt.Errorf("no scanners specified")
-	}
+func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error {
 
 	logger, _ := zap.NewDevelopment()
 	defer logger.Sync()
@@ -97,6 +90,23 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 	if err != nil {
 		return err
 	}
+
+	scanners := DEFAULT_SCANNERS
+	if os.Getenv("TS_SCANNERS") != "" {
+		scanners = strings.Split(os.Getenv("TS_SCANNERS"), ",")
+		fmt.Println("scanners: ", scanners)
+	}
+
+	scanners = analyzer.ResolveScanners(scanners)
+
+	if len(scanners) == 0 {
+		log.Println("Please specify at least one scanner. Set the TS_SCANNERS environment variable to a comma-separated list of scanners.")
+		log.Println("Valid scanners are: vuln, secret, misconfig")
+		return fmt.Errorf("no scanners specified")
+	}
+
+	scanCmd = append(scanCmd, "--scanners", strings.Join(scanners, ","))
+
 	f, err := scan(ctx, scanCmd, options)
 	if err != nil {
 		return err
@@ -104,9 +114,8 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 	endTime := gitlab.ScanTime(time.Now())
 	defer f.Close()
 
-	var trivyReport trivy.Report
-
-	if json.NewDecoder(f).Decode(&trivyReport); err != nil {
+	trivyReport, err := parseTrivyReport(f)
+	if err != nil {
 		sugar.Errorf("Couldn't parse the Trivy report: %v\n", err)
 		return err
 	}
@@ -117,7 +126,7 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 		sugar.Infof("Skipping CycloneDX report")
 	} else {
 		cyclonedxPath := filepath.Join(options.ArtifactDir, cyclonedxArtifactName)
-		if err := generateCycloneDXReport(ctx, cyclonedxPath, trivyReport); err != nil {
+		if err := generateCycloneDXReport(ctx, cyclonedxPath, trivyReport, trivyVersion); err != nil {
 			return err
 		}
 	}
@@ -127,7 +136,7 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 
 		converterId := converter.Meta().ID
 
-		if !slices.Contains(options.Scanners, converter.Meta().TrivyScanner) || converter.Skip(options, Env{}) {
+		if !slices.Contains(scanners, converter.Meta().TrivyScanner) {
 			sugar.Infof("Skipping %s", converterId)
 			continue
 		}
@@ -173,14 +182,22 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 
 }
 
-func generateCycloneDXReport(ctx context.Context, path string, r trivy.Report) error {
+func parseTrivyReport(r io.Reader) (trivy.Report, error) {
+	var trivyReport trivy.Report
+	if err := json.NewDecoder(r).Decode(&trivyReport); err != nil {
+		return trivyReport, err
+	}
+	return trivyReport, nil
+}
+
+func generateCycloneDXReport(ctx context.Context, path string, r trivy.Report, version string) error {
 	cyclonedxReport, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
 	defer cyclonedxReport.Close()
 	log.Println("Generating CycloneDX report")
-	writer := cyclonedx.NewWriter(cyclonedxReport, "ff")
+	writer := cyclonedx.NewWriter(cyclonedxReport, version)
 	if err := writer.Write(r); err != nil {
 		return err
 	}
@@ -198,7 +215,6 @@ func scan(ctx context.Context, cmd []string, options *Options) (io.ReadCloser, e
 	defer tmpFile.Close()
 
 	cmds := append(cmd, "--format", "json", "--output", tmpFile.Name(), "--no-progress", "--list-all-pkgs")
-	cmds = append(cmds, "--scanners", strings.Join(options.Scanners, ","))
 
 	if options.Debug {
 		cmds = append(cmds, "--offline-scan", "--skip-db-update")

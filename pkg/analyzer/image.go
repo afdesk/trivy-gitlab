@@ -2,7 +2,6 @@ package analyzer
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -29,6 +28,13 @@ func (a *imageAnalyzer) ScanCmd(options Options) ([]string, error) {
 	return []string{"image", target}, nil
 }
 
+func (a *imageAnalyzer) ResolveScanners(scanners []string) []string {
+	scanners = Filter(scanners, func(s string) bool {
+		return s == "vuln"
+	})
+	return skipScanByGitlabCause(scanners, "CONTAINER_SCANNING_DISABLED", "vuln")
+}
+
 func (a *imageAnalyzer) Converters() []Converter {
 	return []Converter{
 		NewContainerConverter(),
@@ -49,14 +55,6 @@ func (c *containerConverter) Meta() ConverterMeta {
 		TrivyScanner:  "vuln",
 		ReportVersion: report.Version{Major: 15, Minor: 0, Patch: 0, PreRelease: ""},
 	}
-}
-
-func (c *containerConverter) Skip(o *Options, env Env) bool {
-	if isScanningDisabled("CONTAINER_SCANNING_DISABLED") {
-		log.Println("Skipping container scanning because CONTAINER_SCANNING_DISABLED is set")
-		return true
-	}
-	return false
 }
 
 func (c *containerConverter) Convert(r *types.Report) (*report.Report, error) {
@@ -124,10 +122,6 @@ func (c *containerDepConverter) Meta() ConverterMeta {
 	}
 }
 
-func (c *containerDepConverter) Skip(o *Options, env Env) bool {
-	return false
-}
-
 func (c *containerDepConverter) Convert(r *types.Report) (*report.Report, error) {
 	return &report.Report{
 		Vulnerabilities: []report.Vulnerability{},
@@ -139,7 +133,7 @@ func (c *containerDepConverter) Convert(r *types.Report) (*report.Report, error)
 
 func extractImageName() (string, error) {
 
-	if value, ok := os.LookupEnv("CS_IMAGE"); ok {
+	if value, ok := os.LookupEnv("TS_IMAGE"); ok {
 		return value, nil
 	}
 	if value, ok := os.LookupEnv("DOCKER_IMAGE"); ok {

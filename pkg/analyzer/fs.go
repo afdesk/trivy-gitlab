@@ -29,6 +29,19 @@ func (a *fsAnalyzer) ScanCmd(options Options) ([]string, error) {
 	return []string{"fs", options.Target}, nil
 }
 
+func (a *fsAnalyzer) ResolveScanners(scanners []string) []string {
+
+	scanners = Filter(scanners, func(s string) bool {
+		return s == "vuln" || s == "secret" || s == "config"
+	})
+	scanners = skipScanByGitlabCause(scanners, "DEPENDENCY_SCANNING_DISABLED", "vuln")
+	scanners = skipScanByGitlabCause(scanners, "SECRET_DETECTION_DISABLED", "secret")
+	scanners = skipScanByGitlabCause(scanners, "SAST_DISABLED", "config")
+
+	return scanners
+
+}
+
 func (a *fsAnalyzer) Converters() []Converter {
 	return []Converter{
 		NewDependencyConverter(),
@@ -51,15 +64,6 @@ func (c *dependencyConverter) Meta() ConverterMeta {
 		ReportVersion: report.Version{Major: 15, Minor: 0, Patch: 0, PreRelease: ""},
 	}
 
-}
-
-func (c *dependencyConverter) Skip(o *Options, env Env) bool {
-
-	if isScanningDisabled("DEPENDENCY_SCANNING_DISABLED") {
-		log.Println("Skipping dependency scanning because DEPENDENCY_SCANNING_DISABLED is set")
-		return true
-	}
-	return false
 }
 
 func (c *dependencyConverter) Convert(r *types.Report) (*report.Report, error) {
@@ -115,14 +119,6 @@ func (c *secretsConverter) Meta() ConverterMeta {
 		TrivyScanner:  "secret",
 		ReportVersion: report.Version{Major: 15, Minor: 0, Patch: 0, PreRelease: ""},
 	}
-}
-
-func (c *secretsConverter) Skip(o *Options, env Env) bool {
-	if isScanningDisabled("SAST_DISABLED") {
-		log.Println("Skipping secrets detection because SAST_DISABLED is set")
-		return true
-	}
-	return false
 }
 
 func (c *secretsConverter) Convert(r *types.Report) (*report.Report, error) {
@@ -259,10 +255,6 @@ func (c *misconfigConverter) Meta() ConverterMeta {
 		TrivyScanner:  "config",
 		ReportVersion: report.Version{Major: 15, Minor: 0, Patch: 0, PreRelease: ""},
 	}
-}
-
-func (c *misconfigConverter) Skip(o *Options, env Env) bool {
-	return false
 }
 
 func (c *misconfigConverter) Convert(r *types.Report) (*report.Report, error) {

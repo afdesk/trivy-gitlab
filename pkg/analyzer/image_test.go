@@ -88,9 +88,9 @@ func TestExtractImageName(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "CS_IMAGE",
+			name: "TS_IMAGE",
 			env: map[string]string{
-				"CS_IMAGE": "my-image:latest",
+				"TS_IMAGE": "my-image:latest",
 			},
 			want: "my-image:latest",
 		},

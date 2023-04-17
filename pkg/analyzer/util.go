@@ -85,3 +85,7 @@ func getEnvOrError(key string) (string, error) {
 	}
 	return "", fmt.Errorf("none of the environment variables %s were found but are required for execution", key)
 }
+
+func isEnvVarTrue(envVar string) bool {
+	return os.Getenv(envVar) == "true"
+}

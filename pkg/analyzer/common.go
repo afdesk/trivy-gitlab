@@ -43,9 +43,10 @@ func MakeSolution(vuln types.DetectedVulnerability) string {
 	return ""
 }
 
-func isScanningDisabled(key string) bool {
-	if scanningDisabled, ok := os.LookupEnv(key); ok && scanningDisabled == "true" {
-		return true
+func skipScanByGitlabCause(scanners []string, key string, scanner string) []string {
+	if os.Getenv(key) != "" {
+		fmt.Printf("Skipping %s scan because %s is disabled", scanner, key)
+		return Filter(scanners, func(s string) bool { return s != scanner })
 	}
-	return false
+	return scanners
 }
