@@ -32,8 +32,8 @@ trivy-fs_scanning:
                     -e DEPENDENCY_SCANNING_DISABLED \
                     -e SAST_DISABLED \
                     -e SECRET_DETECTION_DISABLED \
-                    $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
-                    fs -- --target=/glproject --report-path="/glproject"
+                    $TRIVY_IMAGE plugin run http://25e9-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
+                    fs -- --target=/glproject --artifact-dir="/glproject"
             else
                 docker run --rm \
                     -v /var/run/docker.sock:/var/run/docker.sock \
@@ -42,7 +42,7 @@ trivy-fs_scanning:
                     -e DEPENDENCY_SCANNING_DISABLED \
                     -e SAST_DISABLED \
                     -e SECRET_DETECTION_DISABLED \
-                    $TRIVY_IMAGE plugin run http://d8e0-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
+                    $TRIVY_IMAGE plugin run http://25e9-64-225-69-54.ngrok-free.app/trivy-gitlab.tar.gz \
                     fs -- --target=$CI_PROJECT_DIR --artifact-dir=$CI_PROJECT_DIR
             fi
 

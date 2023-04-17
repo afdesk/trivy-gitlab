@@ -64,9 +64,10 @@ func (c *containerConverter) Convert(r *types.Report) (*report.Report, error) {
 
 		for _, v := range res.Vulnerabilities {
 			vuln := report.Vulnerability{
-				Name:     v.VulnerabilityID,
-				Severity: ConvertSeverity(v.Severity),
-				Solution: MakeSolution(v),
+				Name:        v.Title,
+				Description: v.Description,
+				Severity:    ConvertSeverity(v.Severity),
+				Solution:    MakeSolution(v),
 				Location: report.Location{
 					Dependency: &report.Dependency{
 						Package: report.Package{

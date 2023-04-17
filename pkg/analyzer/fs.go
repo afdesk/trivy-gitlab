@@ -38,7 +38,7 @@ func (a *fsAnalyzer) ResolveScanners(scanners []string) []string {
 	scanners = skipScanByGitlabCause(scanners, "SECRET_DETECTION_DISABLED", "secret")
 	scanners = skipScanByGitlabCause(scanners, "SAST_DISABLED", "config")
 
-	return scanners
+	return append(scanners, "license")
 
 }
 
@@ -176,9 +176,17 @@ func getBlame(path, target string, line int) (*BlameOutput, error) {
 		return nil, err
 	}
 
-	filePath := filepath.Join(abs, target)
+	gitDir := filepath.Join(abs, ".git")
 	out, errMsg, err := piped(
-		exec.Command("git", "blame", "--line-porcelain", "-L", fmt.Sprintf("%d,%d", line, line), filePath),
+		exec.Command(
+			"git",
+			"--git-dir", gitDir,
+			"--work-tree", abs,
+			"blame",
+			"--line-porcelain",
+			"-L", fmt.Sprintf("%d,%d", line, line),
+			target,
+		),
 	)
 
 	if err != nil {

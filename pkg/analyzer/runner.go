@@ -42,7 +42,6 @@ type Options struct {
 	Target      string
 	ArtifactDir string
 	Debug       bool
-	CycloneDX   bool
 }
 
 const (
@@ -122,7 +121,7 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 
 	trivyVersion := getTrivyVersion()
 
-	if !options.CycloneDX {
+	if os.Getenv("TS_CYCLONEDX") == "false" || os.Getenv("TS_CYCLONEDX") == "0" {
 		sugar.Infof("Skipping CycloneDX report")
 	} else {
 		cyclonedxPath := filepath.Join(options.ArtifactDir, cyclonedxArtifactName)

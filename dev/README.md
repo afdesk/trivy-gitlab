@@ -141,9 +141,3 @@ trivy-container-dind_scanning:
     variables:
         CS_IMAGE: $CONTAINER_TEST_IMAGE
 ```
-
---- 
-
-TODO:
-- https://github.com/hutchgrant/gitlab-docker-local/blob/master/README.md
-- https://github.com/danieleagle/gitlab-https-docker#generating-a-self-signed-certificate
