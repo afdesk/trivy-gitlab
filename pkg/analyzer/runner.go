@@ -89,7 +89,10 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 	}
 
 	defer func() {
-		if err := logger.Sync(); err != nil && !errors.Is(err, syscall.ENOTTY) {
+		// ignore EINVAL and ENOTTY
+		// https://github.com/uber-go/zap/issues/772
+		// https://github.com/uber-go/zap/issues/991
+		if err := logger.Sync(); err != nil && (!errors.Is(err, syscall.ENOTTY) || !errors.Is(err, syscall.EINVAL)) {
 			log.Printf("failed to sync logger %v", err)
 		}
 	}()
