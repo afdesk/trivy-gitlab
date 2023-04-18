@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 validate_report() {
     report_file=$1
 
@@ -20,16 +22,17 @@ validate_report() {
     fi
 
     ./dev/validate $schema_file $report_file
-
-    rm $report_file
 }
 
 validate_reports() {
     reports=("$@")
+
+    trap "rm -f ${trivy-*-report.json}" EXIT
 
     for report in "${reports[@]}"; do
         echo "Validating $report"
         validate_report $report
         echo "Validation of $report done"
     done
+
 }

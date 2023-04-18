@@ -8,8 +8,7 @@ echo "Running trivy-gitlab container scan on $1"
 
 go run ./cmd/trivy-gitlab container \
     --target $1 \
-    --artifact-dir=$PWD \
-    --debug
+    --artifact-dir=$PWD
 
 reports=("trivy-container-scanning-report.json" "trivy-dependency-scanning-report.json")
 

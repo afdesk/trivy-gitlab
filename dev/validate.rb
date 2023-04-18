@@ -14,3 +14,7 @@ schema = JSONSchemer.schema(Pathname.new(ARGV[0]))
 report = JSON.parse(File.open(ARGV[1]).read)
 schema_validation_errors = schema.validate(report).map { |error| JSONSchemer::Errors.pretty(error) }
 puts(schema_validation_errors)
+
+return if schema_validation_errors.empty?
+
+exit(1)
