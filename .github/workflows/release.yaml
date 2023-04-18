@@ -39,11 +39,6 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - uses: actions/download-artifact@v3
-              with:
-                  name: template
-                  path: .
-
             - name: Set up Go
               uses: actions/setup-go@v4
               with:
