@@ -236,7 +236,7 @@ func parseBlameOutput(out string) (*BlameOutput, error) {
 				return nil, err
 			}
 
-			blame.CommitterTime = time.Unix(i, 0).String()
+			blame.CommitterTime = time.Unix(i, 0).UTC().String()
 		}
 	}
 

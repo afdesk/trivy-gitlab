@@ -29,7 +29,7 @@ filename dev/tests/fixtures/rep1/.env
 				Sha:           "819d0739a1374eb09e199bfc95182c8e1db66475",
 				Committer:     "Nikita Pivkin",
 				Summary:       "tests(fixture): add .env",
-				CommitterTime: "2023-04-17 12:27:31 +0600 +06",
+				CommitterTime: "2023-04-17 06:27:31 +0000 UTC",
 			},
 			wantErr: false,
 		},

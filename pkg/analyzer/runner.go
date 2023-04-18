@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/aquasecurity/trivy/pkg/report/cyclonedx"
@@ -58,6 +60,9 @@ const (
 	unknownVersion = "unknown"
 
 	cyclonedxArtifactName = "trivy-cyclonedx-report.json"
+
+	tsCyclonedxEnv = "TS_CYCLONEDX"
+	tsScannersEnv  = "TS_SCANNERS"
 )
 
 var analyzerMetadata = gitlab.AnalyzerDetails{
@@ -74,13 +79,17 @@ var scannerMetadata = gitlab.ScannerDetails{
 	Name:   scannerName,
 }
 
-var DEFAULT_SCANNERS = []string{"vuln", "secret", "config"}
+var defaultScanners = []string{"vuln", "secret", "config"}
 
 func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error {
 
-	logger, _ := zap.NewDevelopment()
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		return err
+	}
+
 	defer func() {
-		if err := logger.Sync(); err != nil {
+		if err := logger.Sync(); err != nil && !errors.Is(err, syscall.ENOTTY) {
 			log.Printf("failed to sync logger %v", err)
 		}
 	}()
@@ -95,9 +104,9 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 		return err
 	}
 
-	scanners := DEFAULT_SCANNERS
-	if os.Getenv("TS_SCANNERS") != "" {
-		scanners = strings.Split(os.Getenv("TS_SCANNERS"), ",")
+	scanners := defaultScanners
+	if val := os.Getenv(tsScannersEnv); val != "" {
+		scanners = strings.Split(val, ",")
 		fmt.Println("scanners: ", scanners)
 	}
 
@@ -115,18 +124,22 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 	if err != nil {
 		return err
 	}
+
 	endTime := gitlab.ScanTime(time.Now())
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			sugar.Errorf("Couldn't close the Trivy report: %v\n", err)
+		}
+	}()
 
 	trivyReport, err := parseTrivyReport(f)
 	if err != nil {
-		sugar.Errorf("Couldn't parse the Trivy report: %v\n", err)
 		return err
 	}
 
 	trivyVersion := getTrivyVersion()
 
-	if os.Getenv("TS_CYCLONEDX") == "false" || os.Getenv("TS_CYCLONEDX") == "0" {
+	if val := os.Getenv(tsCyclonedxEnv); val == "false" || val == "0" {
 		sugar.Infof("Skipping CycloneDX report")
 	} else {
 		cyclonedxPath := filepath.Join(options.ArtifactDir, cyclonedxArtifactName)
@@ -148,7 +161,7 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 		sugar.Infof("Converting %s", converterId)
 		gitlabReport, err := converter.Convert(&trivyReport)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to convert %s report: %w", converterId, err)
 		}
 
 		gitlabReport.Scan.Analyzer = analyzerMetadata
@@ -170,12 +183,15 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 			return err
 		}
 
-		defer artifactFile.Close()
+		defer func() {
+			if err := artifactFile.Close(); err != nil {
+				sugar.Errorf("Couldn't close the %s report: %v\n", converterId, err)
+			}
+		}()
 
 		enc := json.NewEncoder(artifactFile)
-
 		if err := enc.Encode(gitlabReport); err != nil {
-			return err
+			return fmt.Errorf("failed to encode %s report: %w", converterId, err)
 		}
 
 		sugar.Infof("Report saved to %s", artifactPath)
@@ -189,7 +205,7 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 func parseTrivyReport(r io.Reader) (trivy.Report, error) {
 	var trivyReport trivy.Report
 	if err := json.NewDecoder(r).Decode(&trivyReport); err != nil {
-		return trivyReport, err
+		return trivyReport, fmt.Errorf("failed to decode Trivy report: %w", err)
 	}
 	return trivyReport, nil
 }
@@ -197,15 +213,23 @@ func parseTrivyReport(r io.Reader) (trivy.Report, error) {
 func generateCycloneDXReport(ctx context.Context, path string, r trivy.Report, version string) error {
 	cyclonedxReport, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open CycloneDX report: %w", err)
 	}
-	defer cyclonedxReport.Close()
+	defer func() {
+		if err := cyclonedxReport.Close(); err != nil {
+			log.Printf("failed to close CycloneDX report: %v", err)
+		}
+	}()
+
 	log.Println("Generating CycloneDX report")
+
 	writer := cyclonedx.NewWriter(cyclonedxReport, version)
 	if err := writer.Write(r); err != nil {
-		return err
+		return fmt.Errorf("failed to write CycloneDX report: %w", err)
 	}
+
 	log.Printf("CycloneDX report saved to %s", path)
+
 	return nil
 }
 
@@ -216,7 +240,14 @@ func scan(ctx context.Context, cmd []string, options *Options) (io.ReadCloser, e
 		return nil, err
 	}
 
-	defer tmpFile.Close()
+	defer func() {
+		if err := tmpFile.Close(); err != nil {
+			log.Printf("failed to close temporary file: %v", err)
+		}
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			log.Printf("failed to remove temporary file: %v", err)
+		}
+	}()
 
 	cmds := append(cmd, "--format", "json", "--output", tmpFile.Name(), "--no-progress", "--list-all-pkgs")
 
@@ -225,7 +256,7 @@ func scan(ctx context.Context, cmd []string, options *Options) (io.ReadCloser, e
 	}
 
 	if err := execute(ctx, "trivy", cmds); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to execute trivy: %w", err)
 	}
 
 	return os.Open(tmpFile.Name())
@@ -243,6 +274,7 @@ func execute(ctx context.Context, name string, cmds []string) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
+
 	log.Printf("Start execute command: %s %s\n", name, strings.Join(cmds, " "))
 
 	scanner := bufio.NewScanner(stderr)
@@ -250,28 +282,31 @@ func execute(ctx context.Context, name string, cmds []string) error {
 		m := scanner.Text()
 		fmt.Println(m)
 	}
+
 	return cmd.Wait()
 }
 
 func getTrivyVersion() string {
-	if out, _, err := piped(
-		exec.Command("trivy", "-v"),
-		exec.Command("grep", "Version"),
-		exec.Command("awk", "FNR == 1 {print $2}"),
-	); err != nil {
-		return unknownVersion
-	} else {
-		return strings.TrimSuffix(out, "\n")
-	}
+	return getVersion(
+		exec.Command("trivy", "-v", "--format", "json"),
+		exec.Command("jq", "-r", ".Version"),
+	)
 }
 
 func getPluginVersion() string {
-	if out, _, err := piped(
+	return getVersion(
 		exec.Command("trivy", "plugin", "list"),
 		exec.Command("awk", "$2 ~ /trivy-gitlab/ { getline;print $2 }"),
-	); err != nil {
+	)
+}
+
+func getVersion(cmds ...*exec.Cmd) string {
+	if out, _, err := piped(cmds...); err != nil {
 		return unknownVersion
 	} else {
+		if out == "" {
+			return unknownVersion
+		}
 		return strings.TrimSuffix(out, "\n")
 	}
 }
