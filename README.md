@@ -71,4 +71,4 @@ The scanner supports the [following variables](https://docs.gitlab.com/ee/develo
 
 Note: 
 
-If the number of commits is greater than the value of the GIT_DEPTH CI/CD variable, secret detection fails to detect secrets.
+If the number of commits is greater than the value of the variable GIT_DEPTH CI/CD, secret detection fails to detect the commit when the secret was added.
