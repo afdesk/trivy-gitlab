@@ -5,5 +5,5 @@ usage: ...
 description: |-
     ...
 platforms:
-    - uri: https://github.com/afdesk/trivy-gitlab/releases/download/v0.0.1/trivy-gitlab.tar.gz
+    - uri: https://github.com/afdesk/trivy-gitlab/releases/latest/download/trivy-gitlab.tar.gz
       bin: ./trivy-gitlab
