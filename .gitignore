@@ -8,3 +8,5 @@ trivy-gitlab
 
 !dev/tests/fixtures/rep1/
 !dev/tests/fixtures/rep1/*
+
+dist/
