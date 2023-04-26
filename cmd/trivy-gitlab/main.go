@@ -10,7 +10,10 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-var availableArgs = []string{"--debug", "--target", "--artifact-dir", "--scan-type"}
+var (
+	version       = "dev"
+	availableArgs = []string{"--debug", "--target", "--artifact-dir", "--scan-type"}
+)
 
 func main() {
 
@@ -35,7 +38,7 @@ func main() {
 
 	ctx := context.Background()
 
-	if err := analyzer.Run(ctx, secAnalyzer, globalOptions); err != nil {
+	if err := analyzer.Run(ctx, secAnalyzer, globalOptions, version); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

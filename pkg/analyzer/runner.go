@@ -63,6 +63,8 @@ const (
 
 	tsCyclonedxEnv = "TS_CYCLONEDX"
 	tsScannersEnv  = "TS_SCANNERS"
+
+	trivyVersion = "0.39.1"
 )
 
 var analyzerMetadata = gitlab.AnalyzerDetails{
@@ -92,7 +94,7 @@ func GetAnalyzer(t string) (SecurityAnalyzer, error) {
 	}
 }
 
-func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error {
+func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options, plguinVersion string) error {
 
 	logger, err := zap.NewDevelopment()
 	if err != nil {
@@ -151,8 +153,6 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 		return err
 	}
 
-	trivyVersion := getTrivyVersion()
-
 	if val := os.Getenv(tsCyclonedxEnv); val == "false" || val == "0" {
 		sugar.Infof("Skipping CycloneDX report")
 	} else {
@@ -179,7 +179,7 @@ func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error
 		}
 
 		gitlabReport.Scan.Analyzer = analyzerMetadata
-		gitlabReport.Scan.Analyzer.Version = getPluginVersion()
+		gitlabReport.Scan.Analyzer.Version = plguinVersion
 		gitlabReport.Scan.Scanner = scannerMetadata
 		gitlabReport.Scan.Scanner.Version = trivyVersion
 		gitlabReport.Scan.Type = gitlab.Category(converter.Meta().ScanType)
@@ -298,29 +298,4 @@ func execute(ctx context.Context, name string, cmds []string) error {
 	}
 
 	return cmd.Wait()
-}
-
-func getTrivyVersion() string {
-	return getVersion(
-		exec.Command("trivy", "-v", "--format", "json"),
-		exec.Command("jq", "-r", ".Version"),
-	)
-}
-
-func getPluginVersion() string {
-	return getVersion(
-		exec.Command("trivy", "plugin", "list"),
-		exec.Command("awk", "$2 ~ /trivy-gitlab/ { getline;print $2 }"),
-	)
-}
-
-func getVersion(cmds ...*exec.Cmd) string {
-	if out, _, err := piped(cmds...); err != nil {
-		return unknownVersion
-	} else {
-		if out == "" {
-			return unknownVersion
-		}
-		return strings.TrimSuffix(out, "\n")
-	}
 }
