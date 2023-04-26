@@ -8,7 +8,8 @@ echo "Running trivy-gitlab fs scan on $1"
 
 go run ./cmd/trivy-gitlab fs \
     --target $1 \
-    --artifact-dir=$PWD
+    --artifact-dir $PWD \
+    --scan-type fs
 
 reports=(
     "trivy-dependency-scanning-report.json"

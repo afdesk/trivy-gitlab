@@ -34,7 +34,7 @@ trivy-container_scanning:
                     -e DOCKER_IMAGE \
                     -e CONTAINER_SCANNING_DISABLED \
                     $TRIVY_IMAGE plugin run github.com/afdesk/trivy-gitlab \
-                    container -- --target=$TS_IMAGE --artifact-dir="/glproject"
+                    -- --target=$TS_IMAGE --artifact-dir="/glproject" --scan-type container
             else
                 docker run --rm \
                     -v /var/run/docker.sock:/var/run/docker.sock \
@@ -43,5 +43,5 @@ trivy-container_scanning:
                     -e DOCKER_IMAGE \
                     -e CONTAINER_SCANNING_DISABLED \
                     $TRIVY_IMAGE plugin run github.com/afdesk/trivy-gitlab \
-                    container -- --target=$TS_IMAGE --artifact-dir="${CI_PROJECT_DIR}"
+                    container -- --target=$TS_IMAGE --artifact-dir="${CI_PROJECT_DIR}" --scan-type container
             fi

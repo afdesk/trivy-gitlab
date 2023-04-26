@@ -33,7 +33,7 @@ trivy-fs_scanning:
                     -e SAST_DISABLED \
                     -e SECRET_DETECTION_DISABLED \
                     $TRIVY_IMAGE plugin run github.com/afdesk/trivy-gitlab \
-                    fs -- --target=/glproject --artifact-dir="/glproject"
+                    fs -- --target=/glproject --artifact-dir="/glproject" --scan-type fs
             else
                 docker run --rm \
                     -v /var/run/docker.sock:/var/run/docker.sock \
@@ -43,7 +43,7 @@ trivy-fs_scanning:
                     -e SAST_DISABLED \
                     -e SECRET_DETECTION_DISABLED \
                     $TRIVY_IMAGE plugin run github.com/afdesk/trivy-gitlab \
-                    fs -- --target=$CI_PROJECT_DIR --artifact-dir=$CI_PROJECT_DIR
+                    fs -- --target=$CI_PROJECT_DIR --artifact-dir=$CI_PROJECT_DIR --scan-type fs
             fi
 
     rules:

@@ -81,6 +81,17 @@ var scannerMetadata = gitlab.ScannerDetails{
 
 var defaultScanners = []string{"vuln", "secret", "config"}
 
+func GetAnalyzer(t string) (SecurityAnalyzer, error) {
+	switch t {
+	case "container":
+		return NewImageAnalyzer(), nil
+	case "fs":
+		return NewFsAnalyzer(), nil
+	default:
+		return nil, fmt.Errorf("invalid scan type: %s", t)
+	}
+}
+
 func Run(ctx context.Context, analyzer SecurityAnalyzer, options *Options) error {
 
 	logger, err := zap.NewDevelopment()
