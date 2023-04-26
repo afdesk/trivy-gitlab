@@ -1,6 +1,6 @@
 package analyzer
 
-func ValueOrDefault(val, def string) string {
+func valueOrDefault(val, def string) string {
 	if val == "" {
 		return def
 	}
@@ -8,7 +8,7 @@ func ValueOrDefault(val, def string) string {
 	return val
 }
 
-func Map[T, U any](data []T, f func(T) U) []U {
+func mapf[T, U any](data []T, f func(T) U) []U {
 
 	res := make([]U, 0, len(data))
 	for _, e := range data {
@@ -17,7 +17,7 @@ func Map[T, U any](data []T, f func(T) U) []U {
 	return res
 }
 
-func Filter[T any](data []T, f func(T) bool) []T {
+func filterf[T any](data []T, f func(T) bool) []T {
 
 	fltd := make([]T, 0, len(data))
 

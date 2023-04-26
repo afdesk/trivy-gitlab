@@ -7,38 +7,26 @@ import (
 
 	"github.com/afdesk/trivy-gitlab/pkg/analyzer"
 	"github.com/afdesk/trivy-go-plugin/pkg/common"
-	"golang.org/x/exp/slices"
 )
 
 var (
 	version       = "dev"
-	availableArgs = []string{"--debug", "--target", "--artifact-dir", "--scan-type"}
+	availableArgs = []string{"--target", "--artifact-dir", "--scan-type"}
 )
 
 func main() {
 
-	globalOptions := &analyzer.Options{
-		Debug: false,
-	}
-
 	pluginArgs, _ := common.RetrievePluginArguments(availableArgs)
 
-	if len(pluginArgs) > 0 {
-		debug := pluginArgs["--debug"]
-		globalOptions.Debug = slices.Contains([]string{"true", "1", "y", "yes"}, debug)
-		globalOptions.Target = pluginArgs["--target"]
-		globalOptions.ArtifactDir = pluginArgs["--artifact-dir"]
-	}
-
-	secAnalyzer, err := analyzer.GetAnalyzer(pluginArgs["--scan-type"])
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	globalOptions := &analyzer.Options{
+		Target:      pluginArgs["--target"],
+		ArtifactDir: pluginArgs["--artifact-dir"],
 	}
 
 	ctx := context.Background()
 
-	if err := analyzer.Run(ctx, secAnalyzer, globalOptions, version); err != nil {
+	scannerType := analyzer.ScannerType(pluginArgs["--scan-type"])
+	if err := analyzer.Run(ctx, scannerType, globalOptions, version); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

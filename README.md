@@ -58,17 +58,5 @@ services:
     - docker:20.10-dind
 ```
 
-Allowed variables for all jobs:
-- TS_SCANNERS - list of scanners. 
-  - By default `vuln` for [container](https://aquasecurity.github.io/trivy/v0.40/docs/target/container_image/). Available scanners: `vuln`
-  - By default `vuln,config,secrets` for [filesystem](https://aquasecurity.github.io/trivy/v0.40/docs/target/filesystem/#scanners) scanner. Available scanners: `vuln,config,secrets`
-- TS_CYCLONDEX - if false, cyclonedx report generation is disabled (enabled by default)
-
 Specific variables for the container scanner:
 - TS_IMAGE - name of the image to scan. If not specified, the image name is resolved according to the [following rules](https://docs.gitlab.com/ee/development/integrations/secure.html#container-scanning).
-
-The scanner supports the [following variables](https://docs.gitlab.com/ee/development/integrations/secure.html#policies).
-
-Note: 
-
-If the number of commits is greater than the value of the variable GIT_DEPTH CI/CD, secret detection fails to detect the commit when the secret was added.
