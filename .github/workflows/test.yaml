@@ -18,26 +18,7 @@ env:
 
 jobs:
     test:
-        name: Test
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v3
-
-            - name: Set up Go
-              uses: actions/setup-go@v4
-              with:
-                  go-version-file: go.mod
-
-            - name: go mod tidy
-              run: |
-                  go mod tidy
-                  if [ -n "$(git status go.mod --porcelain)" ]; then
-                    echo "Run 'go mod tidy' and push it"
-                    exit 1
-                  fi
-
-            - name: Run unit tests
-              run: go test -v ./...
+        uses: afdesk/trivy-go-plugin/.github/workflows/unit-test.yaml@main
 
     report-validation:
         name: Report validation
