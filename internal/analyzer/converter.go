@@ -27,8 +27,8 @@ func NewContainerConverter() *containerConverter {
 	return &containerConverter{}
 }
 
-func (c *containerConverter) Meta() ConverterMeta {
-	return ConverterMeta{
+func (c *containerConverter) Meta() converterMeta {
+	return converterMeta{
 		ID:            "container-scanning",
 		ScanType:      report.CategoryContainerScanning,
 		ReportVersion: report.Version{Major: 15, Minor: 0, Patch: 0, PreRelease: ""},
@@ -47,8 +47,8 @@ func NewDependencyConverter() *dependencyConverter {
 	return &dependencyConverter{}
 }
 
-func (c *dependencyConverter) Meta() ConverterMeta {
-	return ConverterMeta{
+func (c *dependencyConverter) Meta() converterMeta {
+	return converterMeta{
 		ID:            "dependency-scanning",
 		ScanType:      report.CategoryDependencyScanning,
 		ReportVersion: report.Version{Major: 15, Minor: 0, Patch: 0, PreRelease: ""},
@@ -77,8 +77,8 @@ func NewSecretsConverter() *secretsConverter {
 	return &secretsConverter{}
 }
 
-func (c *secretsConverter) Meta() ConverterMeta {
-	return ConverterMeta{
+func (c *secretsConverter) Meta() converterMeta {
+	return converterMeta{
 		ID:            "secret-detection",
 		ScanType:      report.CategorySecretDetection,
 		ReportVersion: report.Version{Major: 15, Minor: 0, Patch: 0, PreRelease: ""},
@@ -123,8 +123,8 @@ func NewMisconfigConverter() *misconfigConverter {
 	return &misconfigConverter{}
 }
 
-func (c *misconfigConverter) Meta() ConverterMeta {
-	return ConverterMeta{
+func (c *misconfigConverter) Meta() converterMeta {
+	return converterMeta{
 		ID:            "misconfig-detection",
 		ScanType:      report.CategorySast,
 		ReportVersion: report.Version{Major: 15, Minor: 0, Patch: 0, PreRelease: ""},

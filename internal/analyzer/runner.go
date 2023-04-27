@@ -16,18 +16,18 @@ import (
 	gitlab "gitlab.com/gitlab-org/security-products/analyzers/report/v3"
 )
 
-type ConverterMeta struct {
+type converterMeta struct {
 	ID            string
 	ScanType      gitlab.Category
 	ReportVersion gitlab.Version
 }
 
-type Converter interface {
-	Meta() ConverterMeta
+type converter interface {
+	Meta() converterMeta
 	Convert(r *trivy.Report) (*gitlab.Report, error)
 }
 
-type SecurityScanner interface {
+type securityScanner interface {
 	ScanCmd(options Options) ([]string, error)
 }
 
@@ -151,7 +151,7 @@ func Run(ctx context.Context, scannerType ScannerType, options *Options, plguinV
 	return nil
 }
 
-func getScanner(t ScannerType) (SecurityScanner, error) {
+func getScanner(t ScannerType) (securityScanner, error) {
 	switch t {
 	case ContainerScannerType:
 		return NewImageScanner(), nil
@@ -162,21 +162,21 @@ func getScanner(t ScannerType) (SecurityScanner, error) {
 	}
 }
 
-func getConverters(r *trivy.Report) []Converter {
+func getConverters(r *trivy.Report) []converter {
 	switch r.ArtifactType {
 	case ftypes.ArtifactContainerImage:
-		return []Converter{
+		return []converter{
 			NewContainerConverter(),
 			NewDependencyConverter(),
 		}
 	case ftypes.ArtifactFilesystem:
-		return []Converter{
+		return []converter{
 			NewDependencyConverter(),
 			NewSecretsConverter(),
 			NewMisconfigConverter(),
 		}
 	default:
-		return []Converter{}
+		return []converter{}
 	}
 }
 

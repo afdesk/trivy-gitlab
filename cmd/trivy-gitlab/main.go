@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/afdesk/trivy-gitlab/pkg/analyzer"
+	"github.com/afdesk/trivy-gitlab/internal/analyzer"
 	"github.com/afdesk/trivy-go-plugin/pkg/common"
 )
 
