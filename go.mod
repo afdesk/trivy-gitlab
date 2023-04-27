@@ -1,6 +1,6 @@
 module github.com/afdesk/trivy-gitlab
 
-go 1.20
+go 1.19
 
 require (
 	github.com/afdesk/trivy-go-plugin v0.0.0-20230425141703-7d18a52213b0
