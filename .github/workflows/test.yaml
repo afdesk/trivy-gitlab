@@ -1,0 +1,64 @@
+name: Test
+on:
+    push:
+        branches:
+            - main
+        paths-ignore:
+            - '**.md'
+            - 'plugin.yaml'
+            - 'LICENSE'
+    pull_request:
+        paths-ignore:
+            - '**.md'
+            - 'plugin.yaml'
+            - 'LICENSE'
+
+env:
+    TRIVY_VERSION: 0.38.1
+
+jobs:
+    test:
+        uses: afdesk/trivy-go-plugin/.github/workflows/unit-test.yaml@main
+
+    report-validation:
+        name: Report validation
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Set up Go
+              uses: actions/setup-go@v4
+              with:
+                  go-version-file: go.mod
+
+            - name: Set up Ruby
+              uses: ruby/setup-ruby@v1
+              with:
+                  ruby-version: .ruby-version
+
+            - name: Install Trivy
+              run: |
+                  curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v${{ env.TRIVY_VERSION }}
+
+            - name: Run report validation
+              run: |
+                  ./dev/tests/fs-scanning-report-verify $PWD/dev/tests/fixtures/rep1
+                  ./dev/tests/container-scanning-report-verify python
+
+    build-test:
+        name: Build Test
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+
+            - name: Set up Go
+              uses: actions/setup-go@v4
+              with:
+                  go-version-file: go.mod
+
+            - name: Run GoReleaser
+              uses: goreleaser/goreleaser-action@v4
+              with:
+                  version: latest
+                  args: release --snapshot --clean

@@ -1,0 +1,12 @@
+.idea
+**/.env
+**/.DS_Store
+*.gz
+trivy-gitlab
+**/certs
+**/*.pem
+
+!dev/tests/fixtures/rep1/
+!dev/tests/fixtures/rep1/*
+
+dist/

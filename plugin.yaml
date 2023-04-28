@@ -1,0 +1,65 @@
+name: 'trivy-gitlab'
+repository: github.com/afdesk/trivy-gitlab
+version: '0.0.1'
+usage: integration of the Trivy in gitlab
+description: |-
+    Integration of the Trivy in gitlab.
+platforms:
+    - selector:
+          os: linux
+          arch: amd64
+      uri: https://github.com/afdesk/trivy-gitlab/releases/download/v0.0.1/trivy-gitlab_0.0.1_linux-amd64.tar.gz
+      bin: ./trivy-gitlab
+    - selector:
+          os: linux
+          arch: arm
+      uri: https://github.com/afdesk/trivy-gitlab/releases/download/v0.0.1/trivy-gitlab_0.0.1_linux-arm.tar.gz
+      bin: ./trivy-gitlab
+    - selector:
+          os: linux
+          arch: arm64
+      uri: https://github.com/afdesk/trivy-gitlab/releases/download/v0.0.1/trivy-gitlab_0.0.1_linux-arm64.tar.gz
+      bin: ./trivy-gitlab
+    - selector:
+          os: linux
+          arch: s390x
+      uri: https://github.com/afdesk/trivy-gitlab/releases/download/v0.0.1/trivy-gitlab_0.0.1_linux-s390x.tar.gz
+      bin: ./trivy-gitlab
+    - selector:
+          os: linux
+          arch: ppc64le
+      uri: https://github.com/afdesk/trivy-gitlab/releases/download/v0.0.1/trivy-gitlab_0.0.1_linux-ppc64le.tar.gz
+      bin: ./trivy-gitlab
+    - selector:
+          os: linux
+          arch: 386
+      uri: https://github.com/afdesk/trivy-gitlab/releases/download/v0.0.1/trivy-gitlab_0.0.1_linux-386.tar.gz
+      bin: ./trivy-gitlab
+
+    - selector:
+          os: darwin
+          arch: amd64
+      uri: https://github.com/afdesk/trivy-gitlab/releases/download/v0.0.1/trivy-gitlab_0.0.1_darwin-amd64.tar.gz
+      bin: ./trivy-gitlab
+    - selector:
+          os: darwin
+          arch: arm64
+      uri: https://github.com/afdesk/trivy-gitlab/releases/download/v0.0.1/trivy-gitlab_0.0.1_darwin-arm64.tar.gz
+      bin: ./trivy-gitlab
+
+    - selector:
+          os: freebsd
+          arch: 386
+      uri: https://github.com/afdesk/trivy-gitlab/releases/download/v0.0.1/trivy-gitlab_0.0.1_freebsd-386.tar.gz
+      bin: ./trivy-gitlab
+    - selector:
+          os: freebsd
+          arch: amd64
+      uri: https://github.com/afdesk/trivy-gitlab/releases/download/v0.0.1/trivy-gitlab_0.0.1_freebsd-amd64.tar.gz
+      bin: ./trivy-gitlab
+
+    - selector:
+          os: windows
+          arch: amd64
+      uri: https://github.com/afdesk/trivy-gitlab/releases/download/v0.0.1/trivy-gitlab_0.0.1_windows-amd64.zip
+      bin: ./trivy-gitlab

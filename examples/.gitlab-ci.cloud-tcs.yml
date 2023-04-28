@@ -1,0 +1,18 @@
+image: docker:20.10.16
+
+services:
+    - docker:20.10.16-dind
+
+include:
+    - remote: 'https://raw.githubusercontent.com/afdesk/trivy-gitlab/main/templates/jobs/container-scanning.gitlab-ci.yml'
+
+stages:
+    - test
+
+variables:
+    DOCKER_TLS_CERTDIR: '/certs'
+
+trivy-container_scanning:
+    stage: test
+    variables:
+        TS_IMAGE: python

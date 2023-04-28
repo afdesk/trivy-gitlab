@@ -1,0 +1,40 @@
+variables:
+    TRIVY_TAG: '0.39.1'
+    TRIVY_IMAGE: 'aquasec/trivy:$TRIVY_TAG'
+
+trivy-fs_scanning:
+    artifacts:
+        paths:
+            - trivy-misconfig-detection-report.json
+            - trivy-secret-detection-report.json
+            - trivy-dependency-scanning-report.json
+        reports:
+            sast: trivy-misconfig-detection-report.json
+            dependency_scanning: trivy-dependency-scanning-report.json
+            secret_detection: trivy-secret-detection-report.json
+
+    stage: test
+    allow_failure: true
+
+    script:
+        - >
+            docker pull $TRIVY_IMAGE
+
+            export CONTAINER_ID=$(docker ps -q -f "label=com.gitlab.gitlab-runner.job.id=$CI_JOB_ID" -f "label=com.gitlab.gitlab-runner.type=build")
+
+            if [ -z "$CONTAINER_ID" ]; then
+                docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -v ${CI_PROJECT_DIR}:/glproject \
+                    $TRIVY_IMAGE plugin run github.com/afdesk/trivy-gitlab \
+                    fs /glproject -- --artifact-dir="/glproject"
+            else
+                docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    --volumes-from ${CONTAINER_ID} \
+                    $TRIVY_IMAGE plugin run github.com/afdesk/trivy-gitlab \
+                    fs $CI_PROJECT_DIR -- --artifact-dir=$CI_PROJECT_DIR
+            fi
+
+    rules:
+        - if: $CI_COMMIT_BRANCH

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+function validate() {
+    BASEDIR=$(dirname "$0")
+
+    command -v ruby >/dev/null 2>&1 || {
+        echo >&2 "Ruby is required but it's not installed.  Aborting."
+        exit 1
+    }
+
+    ruby $BASEDIR/validate.rb $1 $2
+    if [ $? -ne 0 ]; then
+        echo "Validation failed"
+        exit 1
+    fi
+}
+
+validate "$@"

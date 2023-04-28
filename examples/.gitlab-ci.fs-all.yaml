@@ -1,0 +1,9 @@
+include:
+    - remote: 'https://raw.githubusercontent.com/afdesk/trivy-gitlab/main/templates/jobs/fs-scanning.gitlab-ci.yml'
+
+stages:
+    - test
+
+trivy-fs_scanning:
+    variables:
+        GIT_STRATEGY: clone

@@ -1,0 +1,38 @@
+#!/bin/bash
+
+set -euo pipefail
+
+validate_report() {
+    report_file=$1
+
+    if [ ! -f $report_file ]; then
+        echo "Report file $report_file does not exist!"
+        exit 1
+    fi
+
+    schema_version=$(jq -r '.version' $report_file)
+    scan_type=$(jq -r '.scan.type' $report_file)
+    scan_type_dash="${scan_type/_/-}"
+
+    schema_file=$PWD/dev/report-schemas/$scan_type_dash-report-format-$schema_version.json
+
+    if [ ! -f $schema_file ]; then
+        echo "Schema file $schema_file does not exist!"
+        exit 1
+    fi
+
+    ./dev/validate $schema_file $report_file
+}
+
+validate_reports() {
+    reports=("$@")
+
+    trap "rm -f ${trivy-*-report.json}" EXIT
+
+    for report in "${reports[@]}"; do
+        echo "Validating $report"
+        validate_report $report
+        echo "Validation of $report done"
+    done
+
+}
