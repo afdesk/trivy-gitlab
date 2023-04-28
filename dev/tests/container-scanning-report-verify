@@ -6,10 +6,7 @@ source ./$basedir/validate_report
 
 echo "Running trivy-gitlab container scan on $1"
 
-go run ./cmd/trivy-gitlab container \
-    --target $1 \
-    --artifact-dir $PWD \
-    --scan-type container
+go run ./cmd/trivy-gitlab image $1 --artifact-dir $PWD
 
 reports=("trivy-container-scanning-report.json" "trivy-dependency-scanning-report.json")
 

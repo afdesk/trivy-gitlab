@@ -26,22 +26,14 @@ trivy-fs_scanning:
                 docker run --rm \
                     -v /var/run/docker.sock:/var/run/docker.sock \
                     -v ${CI_PROJECT_DIR}:/glproject \
-                    --env-file <(env | grep 'CI\|TS') \
-                    -e DEPENDENCY_SCANNING_DISABLED \
-                    -e SAST_DISABLED \
-                    -e SECRET_DETECTION_DISABLED \
                     $TRIVY_IMAGE plugin run github.com/afdesk/trivy-gitlab \
-                    fs -- --target=/glproject --artifact-dir="/glproject" --scan-type fs
+                    fs /glproject -- --artifact-dir="/glproject"
             else
                 docker run --rm \
                     -v /var/run/docker.sock:/var/run/docker.sock \
                     --volumes-from ${CONTAINER_ID} \
-                    --env-file <(env | 'CI\|TS') \
-                    -e DEPENDENCY_SCANNING_DISABLED \
-                    -e SAST_DISABLED \
-                    -e SECRET_DETECTION_DISABLED \
                     $TRIVY_IMAGE plugin run github.com/afdesk/trivy-gitlab \
-                    fs -- --target=$CI_PROJECT_DIR --artifact-dir=$CI_PROJECT_DIR --scan-type fs
+                    fs $CI_PROJECT_DIR -- --artifact-dir=$CI_PROJECT_DIR
             fi
 
     rules:

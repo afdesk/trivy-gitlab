@@ -6,10 +6,7 @@ source ./$basedir/validate_report
 
 echo "Running trivy-gitlab fs scan on $1"
 
-go run ./cmd/trivy-gitlab fs \
-    --target $1 \
-    --artifact-dir $PWD \
-    --scan-type fs
+go run ./cmd/trivy-gitlab fs $1 --artifact-dir $PWD
 
 reports=(
     "trivy-dependency-scanning-report.json"

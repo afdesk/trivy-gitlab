@@ -11,23 +11,30 @@ import (
 
 var (
 	version       = "dev"
-	availableArgs = []string{"--target", "--artifact-dir", "--scan-type"}
+	availableArgs = []string{"--artifact-dir"}
 )
 
 func main() {
 
-	pluginArgs, _ := common.RetrievePluginArguments(availableArgs)
+	if common.IsHelp() || len(os.Args) == 1 {
+		printHelp(availableArgs)
+	}
+
+	pluginArgs, restArgs := common.RetrievePluginArguments(availableArgs)
 
 	globalOptions := &analyzer.Options{
-		Target:      pluginArgs["--target"],
 		ArtifactDir: pluginArgs["--artifact-dir"],
 	}
 
 	ctx := context.Background()
 
-	scannerType := analyzer.ScannerType(pluginArgs["--scan-type"])
-	if err := analyzer.Run(ctx, scannerType, globalOptions, version); err != nil {
+	if err := analyzer.Analyze(ctx, restArgs, globalOptions, version); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func printHelp(availableArgs []string) {
+	fmt.Println("Usage: trivy trivy-gitlab ...")
+	os.Exit(0)
 }

@@ -59,4 +59,4 @@ services:
 ```
 
 Specific variables for the container scanner:
-- TS_IMAGE - name of the image to scan. If not specified, the image name is resolved according to the [following rules](https://docs.gitlab.com/ee/development/integrations/secure.html#container-scanning).
+- TS_IMAGE - name of the image to scan.

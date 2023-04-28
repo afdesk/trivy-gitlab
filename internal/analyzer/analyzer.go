@@ -27,12 +27,7 @@ type converter interface {
 	Convert(r *trivy.Report) (*gitlab.Report, error)
 }
 
-type securityScanner interface {
-	ScanCmd(options Options) ([]string, error)
-}
-
 type Options struct {
-	Target      string
 	ArtifactDir string
 }
 
@@ -67,29 +62,12 @@ var scannerMetadata = gitlab.ScannerDetails{
 	Version: trivyVersion,
 }
 
-type ScannerType string
-
-const (
-	ContainerScannerType ScannerType = "container"
-	FsScannerType        ScannerType = "fs"
-)
-
-func Run(ctx context.Context, scannerType ScannerType, options *Options, plguinVersion string) error {
-
-	scanner, err := getScanner(scannerType)
-	if err != nil {
-		return err
-	}
+func Analyze(ctx context.Context, trivyCmd []string, options *Options, plguinVersion string) error {
 
 	startTime := gitlab.ScanTime(time.Now())
 
 	log.Println("Running scanner")
-	scanCmd, err := scanner.ScanCmd(*options)
-	if err != nil {
-		return err
-	}
-
-	f, err := scan(ctx, scanCmd, options)
+	f, err := scan(ctx, trivyCmd, options)
 	if err != nil {
 		return err
 	}
@@ -151,17 +129,6 @@ func Run(ctx context.Context, scannerType ScannerType, options *Options, plguinV
 	return nil
 }
 
-func getScanner(t ScannerType) (securityScanner, error) {
-	switch t {
-	case ContainerScannerType:
-		return NewImageScanner(), nil
-	case FsScannerType:
-		return NewFsScanner(), nil
-	default:
-		return nil, fmt.Errorf("invalid scan type: %s", t)
-	}
-}
-
 func getConverters(r *trivy.Report) []converter {
 	switch r.ArtifactType {
 	case ftypes.ArtifactContainerImage:
@@ -195,7 +162,7 @@ func scan(ctx context.Context, cmd []string, options *Options) (io.ReadCloser, e
 		}
 	}()
 
-	cmds := append(cmd, "--no-progress", "--list-all-pkgs")
+	cmds := append(cmd, "--list-all-pkgs")
 
 	if err := common.MakeTrivyJsonReport(cmds, tmpFileName); err != nil {
 		return nil, fmt.Errorf("failed to make trivy json report: %w", err)
